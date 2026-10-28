@@ -1,0 +1,55 @@
+@model MyLessonsViewModel
+@{
+    ViewData["Title"] = "Minhas aulas";
+    var upcomingActive = Model.Tab == "proximas";
+}
+<h1 class="h4 fw-bold mb-3" style="color:var(--dj-ink)">Minhas aulas</h1>
+
+<ul class="nav nav-pills mb-3" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(upcomingActive ? "active" : "")" data-bs-toggle="pill" data-bs-target="#tab-upcoming" type="button"
+                role="tab" aria-controls="tab-upcoming" aria-selected="@(upcomingActive ? "true" : "false")">
+            Próximas <span class="badge rounded-pill text-bg-light">@Model.Upcoming.Count</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(!upcomingActive ? "active" : "")" data-bs-toggle="pill" data-bs-target="#tab-history" type="button"
+                role="tab" aria-controls="tab-history" aria-selected="@(!upcomingActive ? "true" : "false")">
+            Histórico <span class="badge rounded-pill text-bg-light">@Model.History.Count</span>
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade @(upcomingActive ? "show active" : "")" id="tab-upcoming" role="tabpanel" tabindex="0">
+        @if (Model.Upcoming.Count == 0)
+        {
+            <div class="card-dj empty-state">
+                <i class="bi bi-calendar2-plus" aria-hidden="true"></i>
+                <p class="fw-semibold mb-1">Você ainda não tem aulas marcadas</p>
+                <a asp-controller="Home" asp-action="Index" class="btn btn-accent mt-2">Encontrar um instrutor</a>
+            </div>
+        }
+        <div class="d-grid gap-2">
+            @foreach (var item in Model.Upcoming)
+            {
+                <partial name="_LessonItem" model="(item, Model.Now)" />
+            }
+        </div>
+    </div>
+    <div class="tab-pane fade @(!upcomingActive ? "show active" : "")" id="tab-history" role="tabpanel" tabindex="0">
+        @if (Model.History.Count == 0)
+        {
+            <div class="card-dj empty-state">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                <p class="fw-semibold mb-0">Nenhuma aula no histórico ainda</p>
+            </div>
+        }
+        <div class="d-grid gap-2">
+            @foreach (var item in Model.History)
+            {
+                <partial name="_LessonItem" model="(item, Model.Now)" />
+            }
+        </div>
+    </div>
+</div>

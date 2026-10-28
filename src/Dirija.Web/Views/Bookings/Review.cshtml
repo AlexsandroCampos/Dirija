@@ -1,0 +1,33 @@
+@model ReviewViewModel
+@{
+    ViewData["Title"] = "Avaliar aula";
+}
+<a asp-action="Index" asp-route-aba="historico" class="d-inline-flex align-items-center gap-1 mb-2 text-decoration-none">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i> Minhas aulas
+</a>
+
+<div class="card-dj p-3" style="max-width:560px">
+    <h1 class="h5 fw-bold" style="color:var(--dj-ink)">Como foi sua aula com @Model.Instructor.Name?</h1>
+    <p class="text-muted-dj small">@Ui.LongDate(Model.Slot.Start)</p>
+
+    <form asp-action="Review" asp-route-id="@Model.Booking.Id" method="post" novalidate>
+        <fieldset class="mb-3">
+            <legend class="form-label fs-6">Sua nota</legend>
+            <div class="star-input">
+                @for (var s = 5; s >= 1; s--)
+                {
+                    <input type="radio" id="star-@s" name="Rating" value="@s" @(Model.Form.Rating == s ? "checked" : "") />
+                    <label for="star-@s" title="@s estrela@(s > 1 ? "s" : "")"><span class="visually-hidden">@s estrela@(s > 1 ? "s" : "")</span><span aria-hidden="true">★</span></label>
+                }
+            </div>
+            <div><span class="text-danger small">@ViewData.ModelState["Rating"]?.Errors.FirstOrDefault()?.ErrorMessage</span></div>
+        </fieldset>
+        <div class="mb-3">
+            <label for="Comment" class="form-label">Comentário (opcional)</label>
+            <textarea id="Comment" name="Comment" class="form-control" rows="4" maxlength="500"
+                      placeholder="Conte como foi a didática, pontualidade, carro...">@Model.Form.Comment</textarea>
+            <span class="text-danger small">@ViewData.ModelState["Comment"]?.Errors.FirstOrDefault()?.ErrorMessage</span>
+        </div>
+        <button type="submit" class="btn btn-accent btn-lg w-100">Enviar avaliação</button>
+    </form>
+</div>

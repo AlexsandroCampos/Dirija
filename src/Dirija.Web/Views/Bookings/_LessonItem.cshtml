@@ -1,0 +1,50 @@
+@model (BookingListItem Item, DateTime Now)
+@{
+    var item = Model.Item;
+    var b = item.Booking;
+    var (statusText, statusCss) = Ui.Status(b.Status);
+    var holdValid = b.Status == BookingStatus.PendingPayment && item.Slot.HeldUntil > Model.Now;
+    var canCancel = b.Status is BookingStatus.Confirmed or BookingStatus.PendingPayment && item.Slot.Start > Model.Now;
+}
+<article class="card-dj lesson-item">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+        <div class="d-flex gap-3 align-items-center min-w-0 flex-grow-1">
+            <div class="avatar" style="background:@Ui.AvatarColor(item.Instructor.Id)" aria-hidden="true">@item.Instructor.Initials</div>
+            <div class="min-w-0">
+                <div class="lesson-date">@Ui.LongDate(item.Slot.Start)</div>
+                <a asp-controller="Instructors" asp-action="Details" asp-route-id="@item.Instructor.Id" class="fw-semibold">@item.Instructor.Name</a>
+                <div class="small text-muted-dj text-truncate"><i class="bi bi-pin-map" aria-hidden="true"></i> @item.Instructor.MeetingPoint</div>
+            </div>
+        </div>
+        <span class="badge @statusCss flex-shrink-0">@statusText</span>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+        <span class="small text-muted-dj">
+            @Ui.Money(b.Price)
+            @if (!string.IsNullOrEmpty(b.PaymentLabel) && b.Status != BookingStatus.PendingPayment) { <text>· @b.PaymentLabel</text> }
+            @if (b.Status == BookingStatus.Canceled && b.CancelReason is not null) { <text>· @b.CancelReason</text> }
+        </span>
+        <div class="d-flex gap-2">
+            @if (holdValid)
+            {
+                <a asp-action="Checkout" asp-route-id="@b.Id" class="btn btn-accent btn-sm">Pagar agora</a>
+            }
+            @if (canCancel)
+            {
+                <form asp-action="Cancel" asp-route-id="@b.Id" method="post" class="m-0"
+                      onsubmit="return confirm('Cancelar esta aula? O horário será liberado para outros alunos.');">
+                    <button type="submit" class="btn btn-outline-danger btn-sm">Cancelar</button>
+                </form>
+            }
+            @if (item.CanReview)
+            {
+                <a asp-action="Review" asp-route-id="@b.Id" class="btn btn-primary btn-sm"><i class="bi bi-star" aria-hidden="true"></i> Avaliar aula</a>
+            }
+            else if (item.HasReview)
+            {
+                <span class="small text-success"><i class="bi bi-check2-circle" aria-hidden="true"></i> Avaliada</span>
+            }
+        </div>
+    </div>
+</article>

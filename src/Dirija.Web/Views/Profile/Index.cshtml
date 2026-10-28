@@ -1,0 +1,60 @@
+@model ProfileViewModel
+@{
+    ViewData["Title"] = "Perfil";
+    var u = Model.User;
+    var initials = string.Concat(u.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => p[0]));
+}
+<section class="card-dj p-3 mb-3 d-flex gap-3 align-items-center">
+    <div class="avatar avatar-lg" style="background:var(--dj-primary)" aria-hidden="true">@initials</div>
+    <div>
+        <h1 class="h5 fw-bold mb-0" style="color:var(--dj-ink)">@u.Name</h1>
+        <div class="small text-muted-dj">@u.Email · @u.Phone</div>
+        <div class="small text-muted-dj"><i class="bi bi-geo-alt" aria-hidden="true"></i> @u.Neighborhood, São Paulo</div>
+        <div class="d-flex gap-3 mt-2 small">
+            <span><strong>@Model.UpcomingCount</strong> próximas</span>
+            <span><strong>@Model.CompletedCount</strong> concluídas</span>
+        </div>
+    </div>
+</section>
+
+<h2 class="section-title">Conta</h2>
+<div class="list-group mb-3">
+    <a asp-controller="Bookings" asp-action="Index" asp-route-aba="historico" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history lead-icon" aria-hidden="true"></i> Histórico de aulas e avaliações</span><i class="bi bi-chevron-right" aria-hidden="true"></i>
+    </a>
+    <div class="list-group-item">
+        <div class="d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-wallet2 lead-icon" aria-hidden="true"></i> Métodos de pagamento</span>
+        </div>
+        <ul class="small text-muted-dj mb-0 mt-2 ps-4">
+            <li>PIX (padrão)</li>
+            <li>Cartão de crédito informado no checkout (não armazenamos o número)</li>
+        </ul>
+    </div>
+</div>
+
+<h2 class="section-title">Configurações</h2>
+<div class="list-group mb-3">
+    <div class="list-group-item d-flex justify-content-between align-items-center">
+        <label class="form-check-label" for="n-reminder"><i class="bi bi-bell lead-icon" aria-hidden="true"></i> Lembrete 1h antes da aula</label>
+        <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="n-reminder" checked disabled /></div>
+    </div>
+    <div class="list-group-item d-flex justify-content-between align-items-center">
+        <label class="form-check-label" for="n-whatsapp"><i class="bi bi-whatsapp lead-icon" aria-hidden="true"></i> Confirmações por WhatsApp</label>
+        <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="n-whatsapp" disabled /></div>
+    </div>
+    <div class="list-group-item d-flex justify-content-between align-items-center">
+        <label class="form-check-label" for="n-email"><i class="bi bi-envelope lead-icon" aria-hidden="true"></i> Confirmações por e-mail</label>
+        <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="n-email" checked disabled /></div>
+    </div>
+</div>
+
+<h2 class="section-title">Sobre o Dirija!</h2>
+<div class="card-dj p-3 mb-3">
+    <p class="mb-2">O Dirija! conecta quem está tirando a CNH (categorias A e B) a instrutores autônomos credenciados, com preço transparente por aula, busca perto de casa e agendamento sem burocracia.</p>
+    <p class="mb-0 small text-muted-dj">Todos os instrutores listados tiveram a credencial do Detran verificada.</p>
+</div>
+
+<form asp-controller="Account" asp-action="Logout" method="post">
+    <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair</button>
+</form>

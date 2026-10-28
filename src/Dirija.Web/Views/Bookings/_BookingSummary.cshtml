@@ -1,0 +1,13 @@
+@model CheckoutViewModel
+<div class="d-flex gap-3 align-items-center mb-3">
+    <div class="avatar" style="background:@Ui.AvatarColor(Model.Instructor.Id)" aria-hidden="true">@Model.Instructor.Initials</div>
+    <div>
+        <div class="fw-bold" style="color:var(--dj-ink)">@Model.Instructor.Name</div>
+        <div class="small text-muted-dj">Categoria @Ui.Categories(Model.Instructor.Categories) · @Model.Instructor.Vehicle</div>
+    </div>
+</div>
+<div class="fact mb-2"><i class="bi bi-calendar-event" aria-hidden="true"></i><div>@Ui.LongDate(Model.Slot.Start) (@Model.Instructor.LessonMinutes min)</div></div>
+<div class="fact mb-3"><i class="bi bi-pin-map" aria-hidden="true"></i><div>@Model.Instructor.MeetingPoint</div></div>
+<div class="summary-row"><span>Aula</span><span>@Ui.Money(Model.Booking.InstructorAmount)</span></div>
+<div class="summary-row text-muted-dj"><span>Taxa da plataforma</span><span>@Ui.Money(Model.Booking.PlatformFee)</span></div>
+<div class="summary-row total"><span>Total</span><span>@Ui.Money(Model.Booking.Price)</span></div>

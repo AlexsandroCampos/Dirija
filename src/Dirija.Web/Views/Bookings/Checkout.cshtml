@@ -1,0 +1,97 @@
+@model CheckoutViewModel
+@{
+    ViewData["Title"] = "Pagamento";
+    var isCard = Model.Form.Method == PaymentMethod.CreditCard;
+
+    // Decorative fake QR code (NOT a real PIX payload), generated deterministically per booking.
+    string FakeQr(int seed)
+    {
+        const int n = 25;
+        var rnd = new Random(seed);
+        var sb = new System.Text.StringBuilder($"<svg class=\"pix-qr\" viewBox=\"0 0 {n} {n}\" role=\"img\" aria-label=\"QR Code PIX\"><rect width=\"{n}\" height=\"{n}\" fill=\"#fff\"/>");
+        bool Finder(int x, int y) => (x < 7 && y < 7) || (x >= n - 7 && y < 7) || (x < 7 && y >= n - 7);
+        for (var y = 0; y < n; y++)
+            for (var x = 0; x < n; x++)
+                if (!Finder(x, y) && rnd.Next(2) == 0) sb.Append($"<rect x=\"{x}\" y=\"{y}\" width=\"1\" height=\"1\"/>");
+        foreach (var (fx, fy) in new[] { (0, 0), (n - 7, 0), (0, n - 7) })
+            sb.Append($"<rect x=\"{fx}\" y=\"{fy}\" width=\"7\" height=\"7\"/><rect x=\"{fx + 1}\" y=\"{fy + 1}\" width=\"5\" height=\"5\" fill=\"#fff\"/><rect x=\"{fx + 2}\" y=\"{fy + 2}\" width=\"3\" height=\"3\"/>");
+        return sb.Append("</svg>").ToString();
+    }
+}
+
+<h1 class="h4 fw-bold mb-3" style="color:var(--dj-ink)">Finalizar reserva</h1>
+
+<div id="hold-banner" class="alert alert-warning d-flex align-items-center gap-2" role="status">
+    <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+    <div>Horário reservado para você por <span id="timer" class="timer" data-seconds="@Model.SecondsLeft">--:--</span>.</div>
+</div>
+<div id="expired" class="alert alert-danger d-none" role="alert">
+    O tempo para pagamento acabou e o horário foi liberado.
+    <a asp-controller="Instructors" asp-action="Details" asp-route-id="@Model.Instructor.Id" class="alert-link">Escolher outro horário</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-12 col-md-5 order-md-2">
+        <section class="card-dj p-3" aria-label="Resumo da reserva">
+            <partial name="_BookingSummary" model="Model" />
+        </section>
+    </div>
+
+    <div class="col-12 col-md-7">
+        <form asp-action="Pay" asp-route-id="@Model.Booking.Id" method="post" class="card-dj p-3" id="pay-form" novalidate>
+            <fieldset>
+                <legend class="section-title">Forma de pagamento</legend>
+                <div class="d-grid gap-2 mb-3">
+                    <input type="radio" class="btn-check" name="Method" id="m-pix" value="Pix" @(isCard ? "" : "checked") />
+                    <label class="pay-option" for="m-pix"><i class="bi bi-qr-code fs-4" aria-hidden="true"></i><div><strong>PIX</strong><div class="small text-muted-dj">Aprovação imediata</div></div></label>
+                    <input type="radio" class="btn-check" name="Method" id="m-card" value="CreditCard" @(isCard ? "checked" : "") />
+                    <label class="pay-option" for="m-card"><i class="bi bi-credit-card fs-4" aria-hidden="true"></i><div><strong>Cartão de crédito</strong><div class="small text-muted-dj">Visa, Mastercard, Elo</div></div></label>
+                </div>
+            </fieldset>
+
+            <div id="panel-pix" class="@(isCard ? "d-none" : "")">
+                <div class="text-center">
+                    @Html.Raw(FakeQr(Model.Booking.Id))
+                    <p class="small text-muted-dj mt-2 mb-1">Ou copie o código PIX:</p>
+                    <div class="input-group input-group-sm mb-3">
+                        <input id="pix-code" class="form-control pix-code" value="@Model.PixCode" readonly aria-label="Código PIX copia e cola" />
+                        <button class="btn btn-outline-primary" type="button" id="copy-pix"><i class="bi bi-clipboard" aria-hidden="true"></i> Copiar</button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-accent btn-lg w-100 pay-submit">Já paguei · @Ui.Money(Model.Booking.Price)</button>
+            </div>
+
+            <div id="panel-card" class="@(isCard ? "" : "d-none")">
+                <div class="mb-2">
+                    <label class="form-label" for="CardNumber">Número do cartão</label>
+                    <input id="CardNumber" name="CardNumber" class="form-control" inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000" maxlength="23" />
+                    <span class="text-danger small">@ViewData.ModelState["CardNumber"]?.Errors.FirstOrDefault()?.ErrorMessage</span>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label" for="CardName">Nome impresso no cartão</label>
+                    <input id="CardName" name="CardName" class="form-control" autocomplete="cc-name" value="@Model.Form.CardName" />
+                    <span class="text-danger small">@ViewData.ModelState["CardName"]?.Errors.FirstOrDefault()?.ErrorMessage</span>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label" for="CardExpiry">Validade (MM/AA)</label>
+                        <input id="CardExpiry" name="CardExpiry" class="form-control" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/AA" maxlength="5" value="@Model.Form.CardExpiry" />
+                        <span class="text-danger small">@ViewData.ModelState["CardExpiry"]?.Errors.FirstOrDefault()?.ErrorMessage</span>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label" for="CardCvv">CVV</label>
+                        <input id="CardCvv" name="CardCvv" class="form-control" inputmode="numeric" autocomplete="cc-csc" maxlength="4" />
+                        <span class="text-danger small">@ViewData.ModelState["CardCvv"]?.Errors.FirstOrDefault()?.ErrorMessage</span>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-accent btn-lg w-100 pay-submit">Pagar @Ui.Money(Model.Booking.Price)</button>
+            </div>
+
+            <p class="small text-muted-dj mt-3 mb-0"><i class="bi bi-shield-lock" aria-hidden="true"></i> Pagamento seguro. Não armazenamos os dados do seu cartão.</p>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/checkout.js" asp-append-version="true"></script>
+}

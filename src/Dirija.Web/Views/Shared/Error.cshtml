@@ -1,0 +1,19 @@
+@model ErrorPageViewModel
+@{
+    var notFound = Model.StatusCode == 404;
+    ViewData["Title"] = notFound ? "Página não encontrada" : "Algo deu errado";
+}
+<div class="card-dj empty-state my-4">
+    <i class="bi @(notFound ? "bi-signpost-split" : "bi-cone-striped")" aria-hidden="true"></i>
+    <h1 class="h4 fw-bold" style="color:var(--dj-ink)">@ViewData["Title"]</h1>
+    <p>
+        @(notFound
+            ? "Não encontramos o que você procurava. Talvez o endereço esteja errado ou o conteúdo não exista mais."
+            : "Tivemos um problema ao processar seu pedido. Tente novamente em instantes.")
+    </p>
+    <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Voltar para a busca</a>
+    @if (!notFound && !string.IsNullOrEmpty(Model.RequestId))
+    {
+        <p class="small mt-3 mb-0">Código do erro: <code>@Model.RequestId</code></p>
+    }
+</div>

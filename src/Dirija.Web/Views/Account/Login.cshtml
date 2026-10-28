@@ -1,0 +1,37 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Entrar";
+}
+<div class="login-wrap">
+<div class="card-dj login-card">
+    <div class="login-hero">
+        <div class="logo-card" role="img" aria-label="Dirija!">
+            <img src="~/img/semaforo.svg" class="brand-light" alt="" aria-hidden="true" />
+            <span class="wordmark" aria-hidden="true">Dirija<span class="brand-bang">!</span></span>
+        </div>
+        <h1 class="h4 fw-bold mb-1" style="color:var(--dj-ink)">Encontre seu instrutor sem sair de casa</h1>
+        <p class="text-muted-dj mb-0">Instrutores autônomos credenciados, perto de você e no preço que cabe no seu bolso.</p>
+    </div>
+
+    <form asp-action="Login" method="post" novalidate>
+        <input type="hidden" asp-for="ReturnUrl" />
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label"></label>
+            <input asp-for="Email" class="form-control form-control-lg" autocomplete="username" inputmode="email" />
+            <span asp-validation-for="Email" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Password" class="form-label"></label>
+            <input asp-for="Password" class="form-control form-control-lg" autocomplete="current-password" />
+            <span asp-validation-for="Password" class="text-danger small"></span>
+        </div>
+        <button type="submit" class="btn btn-accent btn-lg w-100">Entrar</button>
+    </form>
+</div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

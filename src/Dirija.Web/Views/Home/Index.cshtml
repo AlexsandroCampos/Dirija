@@ -1,0 +1,87 @@
+﻿@{
+    ViewData["Title"] = "Buscar instrutores";
+}
+@section Head {
+    <partial name="_LeafletHead" />
+}
+
+<h1 class="visually-hidden">Buscar instrutores perto de você</h1>
+
+<form id="search-form" class="mb-1" role="search" autocomplete="off">
+    <div class="d-flex gap-2">
+        <div class="search-bar flex-grow-1">
+            <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
+            <label for="q" class="visually-hidden">Bairro</label>
+            <input id="q" name="bairro" class="form-control" list="bairros" placeholder="Digite seu bairro (ex.: Moema)" />
+            <datalist id="bairros">
+                @foreach (var n in Dirija.Core.Geo.Neighborhoods.All.OrderBy(n => n.Name))
+                {
+                    <option value="@n.Name"></option>
+                }
+            </datalist>
+        </div>
+        <button type="submit" class="btn btn-accent px-3" aria-label="Buscar"><i class="bi bi-search" aria-hidden="true"></i></button>
+        <button type="button" id="locate" class="btn btn-outline-primary px-3" aria-label="Usar minha localização" title="Usar minha localização">
+            <i class="bi bi-crosshair" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <div class="filters" aria-label="Filtros">
+        <label for="f-cat" class="visually-hidden">Categoria</label>
+        <select id="f-cat" name="categoria" class="form-select form-select-sm">
+            <option value="">Carro e moto</option>
+            <option value="B">Categoria B (carro)</option>
+            <option value="A">Categoria A (moto)</option>
+        </select>
+        <label for="f-price" class="visually-hidden">Preço máximo</label>
+        <select id="f-price" name="precoMax" class="form-select form-select-sm">
+            <option value="">Qualquer preço</option>
+            <option value="80">Até R$ 80</option>
+            <option value="100">Até R$ 100</option>
+            <option value="120">Até R$ 120</option>
+        </select>
+        <label for="f-rating" class="visually-hidden">Nota mínima</label>
+        <select id="f-rating" name="notaMin" class="form-select form-select-sm">
+            <option value="">Qualquer nota</option>
+            <option value="4">Nota 4,0+</option>
+            <option value="4.5">Nota 4,5+</option>
+        </select>
+        <label for="f-radius" class="visually-hidden">Distância máxima</label>
+        <select id="f-radius" name="raio" class="form-select form-select-sm">
+            <option value="5">Até 5 km</option>
+            <option value="10" selected>Até 10 km</option>
+            <option value="20">Até 20 km</option>
+        </select>
+        <label for="f-sort" class="visually-hidden">Ordenar por</label>
+        <select id="f-sort" name="ordem" class="form-select form-select-sm">
+            <option value="distancia">Mais perto</option>
+            <option value="preco">Menor preço</option>
+            <option value="nota">Melhor nota</option>
+        </select>
+    </div>
+</form>
+
+<div class="map-wrap">
+    <div id="map" role="region" aria-label="Mapa com instrutores próximos"></div>
+    <div class="map-legend" aria-hidden="true">
+        <span class="legend-pin">R$ 90</span>valor por aula
+        <span class="legend-you"></span>você
+    </div>
+</div>
+
+<div class="results-head">
+    <h2 class="section-title mb-0" id="results-title" aria-live="polite">Instrutores perto de você</h2>
+    <span class="small text-muted-dj d-none d-sm-inline">Deslize para ver mais <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+</div>
+
+<div id="cards" class="cards-row" aria-describedby="results-title"></div>
+<div id="empty" class="card-dj empty-state d-none">
+    <i class="bi bi-geo" aria-hidden="true"></i>
+    <p class="fw-semibold mb-1">Nenhum instrutor nessa região</p>
+    <p class="small mb-0">Tente aumentar a distância ou remover algum filtro.</p>
+</div>
+<div id="load-error" class="alert alert-danger d-none" role="alert">Não foi possível carregar os instrutores. Tente novamente.</div>
+
+@section Scripts {
+    <script src="~/js/search-map.js" asp-append-version="true"></script>
+}
