@@ -485,3 +485,9 @@ $RECYCLE.BIN/
 
 # Documentos de referência originais (pitch, PIPE, respostas da pesquisa) — não versionar
 referencias/
+
+# Banco SQLite local (recriado automaticamente pelo app)
+*.db
+*.db-shm
+*.db-wal
+src/Dirija.Web/App_Data/

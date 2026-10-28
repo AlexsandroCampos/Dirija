@@ -25,7 +25,7 @@ public class SearchApiController(InstructorSearchService search) : ControllerBas
     /// GET /api/instrutores?bairro=Moema&amp;lat=&amp;lng=&amp;raio=10&amp;categoria=B&amp;precoMax=100&amp;notaMin=4&amp;ordem=distancia|preco|nota
     /// </summary>
     [HttpGet("instrutores")]
-    public ActionResult<SearchResponse> Instructors(
+    public async Task<ActionResult<SearchResponse>> Instructors(
         [FromQuery] string? bairro,
         [FromQuery] double? lat,
         [FromQuery] double? lng,
@@ -57,7 +57,7 @@ public class SearchApiController(InstructorSearchService search) : ControllerBas
             }
         };
 
-        var result = search.Search(query);
+        var result = await search.SearchAsync(query);
         var items = result.Items.Select(x => new InstructorDto(
             x.Instructor.Id, x.Instructor.Name, x.Instructor.Initials, Ui.AvatarColor(x.Instructor.Id),
             x.Instructor.Neighborhood, x.Instructor.PricePerLesson, Ui.Money(x.Instructor.PricePerLesson),

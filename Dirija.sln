@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED6C6CCC
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dirija.Tests", "tests\Dirija.Tests\Dirija.Tests.csproj", "{44D8F567-EA46-4333-9F37-1793376DB95F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dirija.Infrastructure", "src\Dirija.Infrastructure\Dirija.Infrastructure.csproj", "{8C946755-E005-4B52-A79E-2BFAC0E42616}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,10 +36,15 @@ Global
 		{44D8F567-EA46-4333-9F37-1793376DB95F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{44D8F567-EA46-4333-9F37-1793376DB95F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{44D8F567-EA46-4333-9F37-1793376DB95F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C946755-E005-4B52-A79E-2BFAC0E42616}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C946755-E005-4B52-A79E-2BFAC0E42616}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C946755-E005-4B52-A79E-2BFAC0E42616}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C946755-E005-4B52-A79E-2BFAC0E42616}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{D2B9870A-04BE-4D6A-9F40-3EE6FDF1D0A9} = {06E89D29-30E7-481F-BDFA-FB15706E05A8}
 		{E34DFC1C-26FD-4C08-A1BF-2D5D6A4E5C21} = {06E89D29-30E7-481F-BDFA-FB15706E05A8}
 		{44D8F567-EA46-4333-9F37-1793376DB95F} = {ED6C6CCC-286D-405C-A799-EE584215E863}
+		{8C946755-E005-4B52-A79E-2BFAC0E42616} = {06E89D29-30E7-481F-BDFA-FB15706E05A8}
 	EndGlobalSection
 EndGlobal

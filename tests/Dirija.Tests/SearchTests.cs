@@ -1,6 +1,9 @@
 using Dirija.Core.Entities;
 using Dirija.Core.Geo;
 using Dirija.Core.Services;
+using Dirija.Core.Time;
+using Dirija.Infrastructure.Seed;
+using Microsoft.EntityFrameworkCore;
 
 namespace Dirija.Tests;
 
@@ -34,16 +37,26 @@ public class GeoTests
 
     [Fact]
     public void Neighborhoods_Find_UnknownReturnsNull() => Assert.Null(Neighborhoods.Find("Copacabana"));
-}
-
-public class SearchTests
-{
-    private readonly DomainFixture _f = new();
 
     [Fact]
-    public void Search_DefaultsToPaulista_AndSortsByDistance()
+    public void SaoPauloTime_IsUtcMinus3()
     {
-        var result = _f.Search.Search(new SearchQuery());
+        var utc = new DateTime(2026, 10, 26, 11, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(new DateTime(2026, 10, 26, 8, 0, 0), SaoPauloTime.ToLocal(utc));
+        Assert.Equal(utc, SaoPauloTime.ToUtc(new DateTime(2026, 10, 26, 8, 0, 0)));
+    }
+}
+
+public class SearchTests : IAsyncLifetime
+{
+    private DomainFixture _f = null!;
+    public async Task InitializeAsync() => _f = await DomainFixture.CreateAsync();
+    public async Task DisposeAsync() => await _f.DisposeAsync();
+
+    [Fact]
+    public async Task Search_DefaultsToPaulista_AndSortsByDistance()
+    {
+        var result = await _f.Search.SearchAsync(new SearchQuery());
 
         Assert.Equal(Neighborhoods.Paulista.Name, result.Origin.Label);
         Assert.NotEmpty(result.Items);
@@ -51,9 +64,9 @@ public class SearchTests
     }
 
     [Fact]
-    public void Search_RespectsRadius()
+    public async Task Search_RespectsRadius()
     {
-        var result = _f.Search.Search(new SearchQuery { Neighborhood = "Moema", RadiusKm = 3 });
+        var result = await _f.Search.SearchAsync(new SearchQuery { Neighborhood = "Moema", RadiusKm = 3 });
 
         Assert.NotEmpty(result.Items);
         Assert.All(result.Items, i => Assert.True(i.DistanceKm <= 3));
@@ -61,69 +74,72 @@ public class SearchTests
     }
 
     [Fact]
-    public void Search_FiltersByCategory()
+    public async Task Search_FiltersByCategory()
     {
-        var result = _f.Search.Search(new SearchQuery { Category = LicenseCategory.A, RadiusKm = 50 });
+        var result = await _f.Search.SearchAsync(new SearchQuery { Category = LicenseCategory.A, RadiusKm = 50 });
 
         Assert.NotEmpty(result.Items);
         Assert.All(result.Items, i => Assert.True(i.Instructor.Categories.HasFlag(LicenseCategory.A)));
     }
 
     [Fact]
-    public void Search_FiltersByMaxPrice()
+    public async Task Search_FiltersByMaxPrice()
     {
-        var result = _f.Search.Search(new SearchQuery { MaxPrice = 85, RadiusKm = 50 });
+        var result = await _f.Search.SearchAsync(new SearchQuery { MaxPrice = 85, RadiusKm = 50 });
 
         Assert.NotEmpty(result.Items);
         Assert.All(result.Items, i => Assert.True(i.Instructor.PricePerLesson <= 85));
     }
 
     [Fact]
-    public void Search_FiltersByMinRating()
+    public async Task Search_FiltersByMinRating()
     {
-        var result = _f.Search.Search(new SearchQuery { MinRating = 4.8, RadiusKm = 50 });
+        var result = await _f.Search.SearchAsync(new SearchQuery { MinRating = 4.8, RadiusKm = 50 });
 
         Assert.NotEmpty(result.Items);
         Assert.All(result.Items, i => Assert.True(i.Instructor.AverageRating >= 4.8));
     }
 
     [Fact]
-    public void Search_SortsByPriceAndRating()
+    public async Task Search_SortsByPriceAndRating()
     {
-        var byPrice = _f.Search.Search(new SearchQuery { Sort = SearchSort.Price, RadiusKm = 50 }).Items;
-        var byRating = _f.Search.Search(new SearchQuery { Sort = SearchSort.Rating, RadiusKm = 50 }).Items;
+        var byPrice = (await _f.Search.SearchAsync(new SearchQuery { Sort = SearchSort.Price, RadiusKm = 50 })).Items;
+        var byRating = (await _f.Search.SearchAsync(new SearchQuery { Sort = SearchSort.Rating, RadiusKm = 50 })).Items;
 
         Assert.Equal(byPrice.Select(i => i.Instructor.PricePerLesson).Order(), byPrice.Select(i => i.Instructor.PricePerLesson));
         Assert.Equal(byRating.Select(i => i.Instructor.AverageRating).OrderDescending(), byRating.Select(i => i.Instructor.AverageRating));
     }
 
     [Fact]
-    public void Search_NeverListsUnverifiedInstructors()
+    public async Task Search_NeverListsUnverifiedInstructors()
     {
-        var result = _f.Search.Search(new SearchQuery { Neighborhood = "Centro", RadiusKm = 50 });
+        var result = await _f.Search.SearchAsync(new SearchQuery { Neighborhood = "Centro", RadiusKm = 50 });
 
         Assert.All(result.Items, i => Assert.True(i.Instructor.IsVerified));
-        Assert.Contains(_f.Instructors.GetAll(), i => !i.IsVerified); // the seed does contain one
+        Assert.True(await _f.Db.Instructors.AnyAsync(i => !i.IsVerified)); // the seed does contain one
     }
 
     [Fact]
-    public void Search_UsesCoordinatesWhenProvided()
+    public async Task Search_UsesCoordinatesWhenProvided()
     {
-        var result = _f.Search.Search(new SearchQuery { Latitude = -23.5400, Longitude = -46.5760, Neighborhood = "Moema" });
+        var result = await _f.Search.SearchAsync(new SearchQuery { Latitude = -23.5400, Longitude = -46.5760, Neighborhood = "Moema" });
 
         Assert.Equal("Sua localização", result.Origin.Label);
         Assert.Equal("Tatuapé", result.Items.First().Instructor.Neighborhood);
     }
 }
 
-public class SeedTests
+public class SeedTests : IAsyncLifetime
 {
-    private readonly DomainFixture _f = new();
+    private DomainFixture _f = null!;
+    public async Task InitializeAsync() => _f = await DomainFixture.CreateAsync();
+    public async Task DisposeAsync() => await _f.DisposeAsync();
 
     [Fact]
-    public void Seed_HasNoOverlappingSlotsPerInstructor()
+    public async Task Seed_HasNoOverlappingSlotsPerInstructor()
     {
-        foreach (var group in _f.Store.Slots.Values.GroupBy(s => s.InstructorId))
+        var slots = await _f.Db.Slots.ToListAsync();
+        foreach (var group in slots.GroupBy(s => s.InstructorId))
         {
             var ordered = group.OrderBy(s => s.Start).ToList();
             for (var i = 1; i < ordered.Count; i++)
@@ -132,34 +148,56 @@ public class SeedTests
     }
 
     [Fact]
-    public void Seed_HasAtLeastTwelveVerifiedInstructorsWithFreeSlots()
+    public async Task Seed_HasAtLeastTwelveVerifiedInstructorsWithFreeSlots()
     {
-        var verified = _f.Instructors.GetAll().Where(i => i.IsVerified).ToList();
+        var verified = await _f.Db.Instructors.Where(i => i.IsVerified).Select(i => i.Id).ToListAsync();
         Assert.True(verified.Count >= 12);
-        Assert.All(verified, i => Assert.Contains(_f.Store.Slots.Values, s => s.InstructorId == i.Id && s.Status == SlotStatus.Available));
+        foreach (var id in verified)
+            Assert.True(await _f.Db.Slots.AnyAsync(s => s.InstructorId == id && s.Status == SlotStatus.Available));
     }
 
     [Fact]
-    public void Seed_DemoStudentHasHistoryAndUpcomingLesson()
+    public async Task Seed_DemoStudentHasHistoryAndUpcomingLesson()
     {
-        var list = _f.BookingService.ListForStudent(1);
+        var list = await _f.BookingService.ListForStudentAsync(1);
         Assert.Contains(list, b => b.Status == BookingStatus.Completed);
         Assert.Contains(list, b => b.Status == BookingStatus.Confirmed);
     }
-}
-
-public class UserRepositoryTests
-{
-    private readonly DomainFixture _f = new();
 
     [Fact]
-    public void ValidCredentials_ReturnUser() =>
-        Assert.Equal(1, _f.Users.ValidateCredentials("ALUNO@dirija.com", "123456")?.Id);
+    public async Task Seed_SlotsAreUtcAndBetween8And17InSaoPaulo()
+    {
+        var slots = await _f.Db.Slots.AsNoTracking().ToListAsync();
+        Assert.All(slots, s =>
+        {
+            Assert.Equal(DateTimeKind.Utc, s.Start.Kind);
+            Assert.InRange(SaoPauloTime.ToLocal(s.Start).Hour, 8, 17);
+        });
+    }
+
+    [Fact]
+    public async Task Seed_StoresPasswordsAsHash()
+    {
+        var user = await _f.Db.Users.SingleAsync(u => u.Email == SeedData.DemoStudentEmail);
+        Assert.NotEqual(SeedData.DemoPassword, user.PasswordHash);
+        Assert.DoesNotContain(SeedData.DemoPassword, user.PasswordHash);
+    }
+}
+
+public class AuthServiceTests : IAsyncLifetime
+{
+    private DomainFixture _f = null!;
+    public async Task InitializeAsync() => _f = await DomainFixture.CreateAsync();
+    public async Task DisposeAsync() => await _f.DisposeAsync();
+
+    [Fact]
+    public async Task ValidCredentials_ReturnUser_CaseInsensitiveEmail() =>
+        Assert.Equal(1, (await _f.Auth.ValidateCredentialsAsync("  ALUNO@dirija.com ", "123456"))?.Id);
 
     [Theory]
     [InlineData("aluno@dirija.com", "errada")]
     [InlineData("ninguem@dirija.com", "123456")]
     [InlineData("", "")]
-    public void InvalidCredentials_ReturnNull(string email, string password) =>
-        Assert.Null(_f.Users.ValidateCredentials(email, password));
+    public async Task InvalidCredentials_ReturnNull(string email, string password) =>
+        Assert.Null(await _f.Auth.ValidateCredentialsAsync(email, password));
 }

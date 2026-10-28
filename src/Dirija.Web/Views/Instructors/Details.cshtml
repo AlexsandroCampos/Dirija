@@ -80,8 +80,8 @@
                             <form asp-controller="Bookings" asp-action="Reserve" method="post" class="m-0">
                                 <input type="hidden" name="slotId" value="@slot.Id" />
                                 <button type="submit" class="btn btn-outline-primary"
-                                        aria-label="Reservar @Ui.DayLabel(day.Date, Model.Today) às @slot.Start.ToString("HH:mm")">
-                                    @slot.Start.ToString("HH:mm")
+                                        aria-label="Reservar @Ui.DayLabel(day.Date, Model.Today) às @Ui.Time(slot.Start)">
+                                    @Ui.Time(slot.Start)
                                 </button>
                             </form>
                         }
@@ -106,7 +106,7 @@
         <article class="review">
             <div class="d-flex justify-content-between">
                 <strong>@r.StudentName</strong>
-                <span class="small text-muted-dj">@r.CreatedAt.ToString("dd/MM/yyyy")</span>
+                <span class="small text-muted-dj">@Ui.ShortDate(r.CreatedAt)</span>
             </div>
             <div class="stars small" role="img" aria-label="Nota @r.Rating de 5">@Stars(r.Rating)</div>
             @if (!string.IsNullOrWhiteSpace(r.Comment))

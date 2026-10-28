@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Dirija.Web.Controllers;
 
 [Route("conta")]
-public class AccountController(IUserRepository users) : Controller
+public class AccountController(IAuthService auth) : Controller
 {
     [AllowAnonymous]
     [HttpGet("entrar")]
@@ -25,7 +25,7 @@ public class AccountController(IUserRepository users) : Controller
     {
         if (!ModelState.IsValid) return View(model);
 
-        var user = users.ValidateCredentials(model.Email, model.Password);
+        var user = await auth.ValidateCredentialsAsync(model.Email, model.Password);
         if (user is null)
         {
             // Generic message: don't reveal whether the e-mail exists.

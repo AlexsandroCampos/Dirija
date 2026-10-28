@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Dirija.Core\Dirija.Core.csproj" />
     <ProjectReference Include="..\..\src\Dirija.Web\Dirija.Web.csproj" />
+    <ProjectReference Include="..\..\src\Dirija.Infrastructure\Dirija.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

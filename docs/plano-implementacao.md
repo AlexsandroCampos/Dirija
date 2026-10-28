@@ -115,7 +115,7 @@ Salvar este plano em `docs/plano-implementacao.md` e gerar `docs/plano-implement
 
 Estas informações foram retiradas da interface para a apresentação ficar limpa. **Tudo abaixo é mock** e não está pronto para produção.
 
-**Como rodar:** `dotnet run --project src/Dirija.Web` e abrir <http://localhost:5275>.
+**Como rodar:** `dotnet run --project src/Dirija.Web` e abrir <http://localhost:5275>. Antes de gravar, recrie o banco para começar do estado inicial: `dotnet run --project src/Dirija.Web -- --Database:ResetOnStartup=true`.
 
 **Contas de teste** (senha `123456` para ambas):
 
@@ -129,8 +129,8 @@ Estas informações foram retiradas da interface para a apresentação ficar lim
 - Cartão de teste: `4111 1111 1111 1111`, qualquer validade futura (ex.: `12/30`), CVV `123`. Apenas os 4 últimos dígitos são guardados ("Cartão final 1111").
 
 **O que é simulado:**
-- Usuários, instrutores, horários e avaliações são fictícios e ficam em memória: tudo volta ao estado inicial quando o app reinicia.
-- Senhas em texto puro (sem hash) — trocar por ASP.NET Identity antes de produção.
+- Usuários, instrutores, horários e avaliações são fictícios. Desde a Entrega 1.1 ficam num banco SQLite (`src/Dirija.Web/App_Data/dirija.db`) e **sobrevivem ao reinício**. Para voltar ao estado inicial antes de gravar a demo, pare o app e apague o `dirija.db`, ou rode `dotnet run --project src/Dirija.Web -- --Database:ResetOnStartup=true`.
+- As senhas das contas demo são guardadas com hash (PBKDF2), mas não existe cadastro nem recuperação de senha.
 - As credenciais Detran exibidas são números inventados; "Credencial verificada" não consulta nenhum órgão.
 - Notificações (lembrete, WhatsApp, e-mail) aparecem no Perfil, mas não são enviadas.
 - O mapa e o Bootstrap vêm de CDN: a demo precisa de internet.
@@ -145,9 +145,35 @@ Estas informações foram retiradas da interface para a apresentação ficar lim
 7. Minhas aulas: ver em Próximas, cancelar uma, avaliar uma do Histórico.
 8. Perfil: dados, pagamentos, configurações, Sobre e Sair.
 
+## Entrega 1.1 — Persistência com SQLite (EF Core)
+
+Os dados em memória foram substituídos por um banco SQLite, sem mudar o fluxo do aluno.
+
+```mermaid
+flowchart LR
+  Web[Dirija.Web] --> Core[Dirija.Core<br/>entidades, interfaces, serviços]
+  Web --> Infra[Dirija.Infrastructure<br/>DbContext, repositórios EF,<br/>migrations, seed, hash de senha]
+  Infra --> Core
+```
+
+**Decisões:**
+- Projeto novo `Dirija.Infrastructure`: o Core não depende do EF; a troca de banco fica isolada nesse projeto.
+- Repositórios e serviços assíncronos e *scoped* (um `DbContext` por requisição).
+- **Anti-overbooking:** controle de concorrência otimista. `Slot` e `Booking` têm uma coluna `Version`; o `UPDATE` só acontece se a versão não mudou. Se dois alunos reservam o mesmo horário, o segundo recebe "horário indisponível". Testado com 50 reservas simultâneas num arquivo SQLite real (1 sucesso).
+- **Datas em UTC** no banco, exibidas no horário de São Paulo (`SaoPauloTime`). As regras de agenda (08h–17h, sábado até 12h) usam o horário local.
+- **Senhas com hash** (`PasswordHasher` do ASP.NET Core Identity).
+- **Busca geográfica:** pré-filtro por "quadrado" de latitude/longitude no banco (índice) + distância exata (Haversine), filtro de preço e ordenação em C#.
+- **Inicialização:** aplica migrations; na primeira execução grava o seed; nas próximas só completa os horários dos próximos 14 dias. `Database:ResetOnStartup=true` recria o banco.
+
+**Próximo passo — PostgreSQL:**
+1. Trocar o pacote `Microsoft.EntityFrameworkCore.Sqlite` por `Npgsql.EntityFrameworkCore.PostgreSQL` e `UseSqlite` por `UseNpgsql` (`DependencyInjection.cs`).
+2. Apagar `Persistence/Migrations` e gerar a migration `Inicial` de novo.
+3. Ajustar a connection string; o seed roda de novo no banco vazio.
+4. Opcional: reforçar o anti-overbooking com `SELECT ... FOR UPDATE` ou *exclusion constraint*, e trocar o pré-filtro por PostGIS (`geography(Point,4326)` + índice GiST + `ST_DWithin`).
+
 ## Próximas entregas (fora do escopo)
 
-- Persistência com EF Core + PostgreSQL/PostGIS.
+- PostgreSQL/PostGIS e cadastro de usuários.
 - Painel do instrutor (agenda, preço, área de atendimento, documentos).
 - Painel do administrador (aprovação de credenciais, disputas, métricas).
 - Gateway de pagamento real com split e notificações.

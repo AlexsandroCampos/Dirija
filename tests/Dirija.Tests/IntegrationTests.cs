@@ -5,11 +5,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Dirija.Tests;
 
-public partial class IntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public partial class IntegrationTests : IClassFixture<DirijaWebFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly DirijaWebFactory _factory;
 
-    public IntegrationTests(WebApplicationFactory<Program> factory) => _factory = factory;
+    public IntegrationTests(DirijaWebFactory factory) => _factory = factory;
 
     private HttpClient NewClient() =>
         _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, HandleCookies = true });
@@ -164,6 +164,43 @@ public partial class IntegrationTests : IClassFixture<WebApplicationFactory<Prog
         var lessons = await client.GetStringAsync("/minhas-aulas");
         Assert.Contains("Confirmada", lessons);
         Assert.Contains(search.Items.First().Name, lessons);
+    }
+
+    [Fact]
+    public async Task Restart_KeepsReservationsAndDoesNotReseed()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"dirija-restart-{Guid.NewGuid():N}.db");
+        try
+        {
+            string slotId;
+            int instructorsBefore;
+            await using (var first = new PersistentWebFactory(path))
+            {
+                var client = await LoginAsync(first.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false }), "aluno@dirija.com");
+                instructorsBefore = (await client.GetFromJsonAsync<SearchResponseDto>("/api/instrutores?raio=50"))!.Count;
+
+                var details = await client.GetStringAsync("/instrutores/4");
+                slotId = SlotRegex().Match(details).Groups[1].Value;
+                var reserve = await PostFormAsync(client, "/reservas", WebUtility.HtmlDecode(TokenRegex().Match(details).Groups[1].Value),
+                    new() { ["slotId"] = slotId });
+                var checkoutUrl = reserve.Headers.Location!.OriginalString;
+                var pay = await PostFormAsync(client, checkoutUrl, await GetTokenAsync(client, checkoutUrl), new() { ["Method"] = "Pix" });
+                Assert.EndsWith("/confirmada", pay.Headers.Location!.OriginalString);
+            }
+
+            // "Restart": a brand-new app instance over the same database file.
+            await using var second = new PersistentWebFactory(path);
+            var again = await LoginAsync(second.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false }), "aluno@dirija.com");
+
+            var lessons = await again.GetStringAsync("/minhas-aulas");
+            Assert.Contains("Patrícia Lima", lessons);
+            Assert.DoesNotContain($"name=\"slotId\" value=\"{slotId}\"", await again.GetStringAsync("/instrutores/4"));
+            Assert.Equal(instructorsBefore, (await again.GetFromJsonAsync<SearchResponseDto>("/api/instrutores?raio=50"))!.Count);
+        }
+        finally
+        {
+            TempDb.Delete(path);
+        }
     }
 
     [Fact]

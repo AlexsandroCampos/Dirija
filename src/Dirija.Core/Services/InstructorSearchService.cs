@@ -29,21 +29,32 @@ public record InstructorSearchItem(Instructor Instructor, double DistanceKm, boo
 
 public record SearchResult(SearchOrigin Origin, IReadOnlyList<InstructorSearchItem> Items);
 
+/// <summary>
+/// Two-step geo search: the database pre-filters by a lat/lng bounding box (indexed), then the exact
+/// Haversine distance, price filter and sorting run in memory on the small candidate set.
+/// PostGIS (ST_DWithin + GiST) can replace the first step later without changing this API.
+/// </summary>
 public class InstructorSearchService(IInstructorRepository instructors)
 {
     public const double DefaultRadiusKm = 10;
     public const double MaxRadiusKm = 50;
+    private const double KmPerDegreeLatitude = 111.32;
 
-    public SearchResult Search(SearchQuery query)
+    public async Task<SearchResult> SearchAsync(SearchQuery query)
     {
         var origin = ResolveOrigin(query);
         var radius = Math.Clamp(query.RadiusKm, 0.5, MaxRadiusKm);
+        var (lat, lng) = (origin.Point.Latitude, origin.Point.Longitude);
 
-        var items = instructors.GetAll()
-            .Where(i => i.IsVerified) // only audited credentials are listed
-            .Where(i => query.Category is null or LicenseCategory.None || i.Categories.HasFlag(query.Category.Value))
+        var dLat = radius / KmPerDegreeLatitude;
+        var dLng = radius / (KmPerDegreeLatitude * Math.Max(0.01, Math.Cos(lat * Math.PI / 180)));
+        var category = query.Category is LicenseCategory.None ? null : query.Category;
+
+        var candidates = await instructors.FindVerifiedCandidatesAsync(new InstructorCandidateFilter(
+            lat - dLat, lat + dLat, lng - dLng, lng + dLng, category, query.MinRating));
+
+        var items = candidates
             .Where(i => query.MaxPrice is null || i.PricePerLesson <= query.MaxPrice)
-            .Where(i => query.MinRating is null || i.AverageRating >= query.MinRating)
             .Select(i =>
             {
                 var d = GeoMath.HaversineKm(origin.Point, new GeoPoint(i.Latitude, i.Longitude));

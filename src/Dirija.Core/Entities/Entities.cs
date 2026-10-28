@@ -41,14 +41,24 @@ public enum PaymentMethod
     CreditCard
 }
 
+/// <summary>
+/// Optimistic concurrency token. The persistence layer increments <see cref="Version"/> on every update and
+/// rejects the write if another request changed the row first (this is what prevents double booking).
+/// </summary>
+public interface IVersioned
+{
+    int Version { get; set; }
+}
+
 public class User
 {
     public int Id { get; init; }
     public required string Name { get; init; }
+    /// <summary>Always stored lower-case so lookups are case-insensitive on every database.</summary>
     public required string Email { get; init; }
     public string Phone { get; init; } = "";
-    /// <summary>MOCK ONLY: plain-text demo password. Replace with ASP.NET Identity hashing before production.</summary>
-    public required string Password { get; init; }
+    /// <summary>ASP.NET Core Identity password hash (PBKDF2). Never the plain password.</summary>
+    public required string PasswordHash { get; set; }
     public UserRole Role { get; init; } = UserRole.Student;
     public string Neighborhood { get; init; } = "";
 }
@@ -79,7 +89,8 @@ public class Instructor
         string.Concat(Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => p[0]));
 }
 
-public class Slot
+/// <summary>A lesson time window. All dates are UTC.</summary>
+public class Slot : IVersioned
 {
     public int Id { get; init; }
     public int InstructorId { get; init; }
@@ -88,14 +99,16 @@ public class Slot
     public SlotStatus Status { get; set; } = SlotStatus.Available;
     public DateTime? HeldUntil { get; set; }
     public int? BookingId { get; set; }
+    public int Version { get; set; }
 
     /// <summary>A slot is free when available, or when a previous hold has already expired.</summary>
-    public bool IsFree(DateTime now) =>
+    public bool IsFree(DateTime nowUtc) =>
         Status == SlotStatus.Available ||
-        (Status == SlotStatus.Held && HeldUntil is { } until && until <= now);
+        (Status == SlotStatus.Held && HeldUntil is { } until && until <= nowUtc);
 }
 
-public class Booking
+/// <summary>A student's reservation. All dates are UTC.</summary>
+public class Booking : IVersioned
 {
     public int Id { get; init; }
     public int StudentId { get; init; }
@@ -112,6 +125,7 @@ public class Booking
     public DateTime? PaidAt { get; set; }
     public DateTime? CanceledAt { get; set; }
     public string? CancelReason { get; set; }
+    public int Version { get; set; }
 }
 
 public class Review

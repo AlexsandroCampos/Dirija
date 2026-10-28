@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using Dirija.Core.Entities;
+using Dirija.Core.Time;
 
 namespace Dirija.Web.Infrastructure;
 
@@ -40,8 +41,17 @@ public static class Ui
         return $"{char.ToUpper(name[0])}{name[1..]} {date:dd/MM}";
     }
 
-    public static string LongDate(DateTime date) =>
-        date.ToString("dddd, dd 'de' MMMM 'às' HH:mm", PtBr);
+    // Stored dates are UTC; everything shown to the user is São Paulo local time.
+
+    /// <summary>"segunda-feira, 26 de outubro às 08:00" from a UTC instant.</summary>
+    public static string LongDate(DateTime utc) =>
+        SaoPauloTime.ToLocal(utc).ToString("dddd, dd 'de' MMMM 'às' HH:mm", PtBr);
+
+    /// <summary>"08:00" from a UTC instant.</summary>
+    public static string Time(DateTime utc) => SaoPauloTime.ToLocal(utc).ToString("HH:mm", PtBr);
+
+    /// <summary>"26/10/2026" from a UTC instant.</summary>
+    public static string ShortDate(DateTime utc) => SaoPauloTime.ToLocal(utc).ToString("dd/MM/yyyy", PtBr);
 
     public static string LessonCount(int n) => n == 1 ? "1 aula dada" : $"{n} aulas dadas";
     public static string ReviewCount(int n) => n == 1 ? "1 avaliação" : $"{n} avaliações";

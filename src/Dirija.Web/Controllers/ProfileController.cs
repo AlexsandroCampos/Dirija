@@ -11,12 +11,12 @@ namespace Dirija.Web.Controllers;
 public class ProfileController(IUserRepository users, BookingService bookingService) : Controller
 {
     [HttpGet("")]
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
-        var user = users.GetById(User.GetUserId());
+        var user = await users.GetByIdAsync(User.GetUserId());
         if (user is null) return RedirectToAction("Login", "Account");
 
-        var bookings = bookingService.ListForStudent(user.Id);
+        var bookings = await bookingService.ListForStudentAsync(user.Id);
         return View(new ProfileViewModel
         {
             User = user,

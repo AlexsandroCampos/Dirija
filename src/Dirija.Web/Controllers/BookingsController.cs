@@ -19,12 +19,12 @@ public class BookingsController(
     // ---------------------------------------------------------------- reserve (hold)
 
     [HttpPost("reservas")]
-    public IActionResult Reserve(int slotId)
+    public async Task<IActionResult> Reserve(int slotId)
     {
-        var slot = slots.GetById(slotId);
+        var slot = await slots.GetByIdAsync(slotId);
         if (slot is null) return NotFound();
 
-        var result = bookingService.HoldSlot(User.GetUserId(), slotId);
+        var result = await bookingService.HoldSlotAsync(User.GetUserId(), slotId);
         if (!result.Success)
         {
             TempData[ErrorKey] = result.Error switch
@@ -42,9 +42,9 @@ public class BookingsController(
     // ---------------------------------------------------------------- checkout / payment (simulated)
 
     [HttpGet("reservas/{id:int}/pagamento")]
-    public IActionResult Checkout(int id)
+    public async Task<IActionResult> Checkout(int id)
     {
-        var result = bookingService.GetForStudent(id, User.GetUserId());
+        var result = await bookingService.GetForStudentAsync(id, User.GetUserId());
         if (!result.Success) return NotFound();
         var booking = result.Booking!;
 
@@ -55,13 +55,13 @@ public class BookingsController(
             return RedirectToAction("Details", "Instructors", new { id = booking.InstructorId });
         }
 
-        return View(BuildCheckout(booking, new PaymentFormModel()));
+        return View(await BuildCheckoutAsync(booking, new PaymentFormModel()));
     }
 
     [HttpPost("reservas/{id:int}/pagamento")]
-    public IActionResult Pay(int id, PaymentFormModel form)
+    public async Task<IActionResult> Pay(int id, PaymentFormModel form)
     {
-        var owned = bookingService.GetForStudent(id, User.GetUserId());
+        var owned = await bookingService.GetForStudentAsync(id, User.GetUserId());
         if (!owned.Success) return NotFound();
 
         string label;
@@ -74,7 +74,7 @@ public class BookingsController(
                 // Never echo the card number/CVV back to the page.
                 form.CardNumber = null;
                 form.CardCvv = null;
-                return View("Checkout", BuildCheckout(owned.Booking!, form));
+                return View("Checkout", await BuildCheckoutAsync(owned.Booking!, form));
             }
             var digits = OnlyDigits(form.CardNumber);
             label = $"Cartão final {digits[^4..]}";
@@ -85,7 +85,7 @@ public class BookingsController(
             label = "PIX";
         }
 
-        var result = bookingService.ConfirmPayment(id, User.GetUserId(), form.Method, label);
+        var result = await bookingService.ConfirmPaymentAsync(id, User.GetUserId(), form.Method, label);
         if (!result.Success)
         {
             TempData[ErrorKey] = result.Error == BookingError.HoldExpired
@@ -98,28 +98,34 @@ public class BookingsController(
     }
 
     [HttpGet("reservas/{id:int}/confirmada")]
-    public IActionResult Confirmed(int id)
+    public async Task<IActionResult> Confirmed(int id)
     {
-        var result = bookingService.GetForStudent(id, User.GetUserId());
+        var result = await bookingService.GetForStudentAsync(id, User.GetUserId());
         if (!result.Success) return NotFound();
         var booking = result.Booking!;
         if (booking.Status is not (BookingStatus.Confirmed or BookingStatus.Completed))
             return RedirectToAction(nameof(Checkout), new { id });
 
-        return View(BuildCheckout(booking, new PaymentFormModel()));
+        return View(await BuildCheckoutAsync(booking, new PaymentFormModel()));
     }
 
     // ---------------------------------------------------------------- my lessons
 
     [HttpGet("minhas-aulas")]
-    public IActionResult Index(string? aba = null)
+    public async Task<IActionResult> Index(string? aba = null)
     {
-        var now = clock.Now;
-        var items = bookingService.ListForStudent(User.GetUserId())
+        var now = clock.UtcNow;
+        var list = await bookingService.ListForStudentAsync(User.GetUserId());
+        var instructorMap = (await instructors.GetByIdsAsync(list.Select(b => b.InstructorId))).ToDictionary(i => i.Id);
+        var slotMap = (await slots.GetByIdsAsync(list.Select(b => b.SlotId))).ToDictionary(s => s.Id);
+        var reviewed = await bookingService.GetReviewedBookingIdsAsync(list.Select(b => b.Id));
+
+        var items = list
+            .Where(b => instructorMap.ContainsKey(b.InstructorId) && slotMap.ContainsKey(b.SlotId))
             .Select(b =>
             {
-                var hasReview = bookingService.HasReview(b.Id);
-                return new BookingListItem(b, instructors.GetById(b.InstructorId)!, slots.GetById(b.SlotId)!,
+                var hasReview = reviewed.Contains(b.Id);
+                return new BookingListItem(b, instructorMap[b.InstructorId], slotMap[b.SlotId],
                     b.Status == BookingStatus.Completed && !hasReview, hasReview);
             })
             .ToList();
@@ -139,9 +145,9 @@ public class BookingsController(
     }
 
     [HttpPost("reservas/{id:int}/cancelar")]
-    public IActionResult Cancel(int id)
+    public async Task<IActionResult> Cancel(int id)
     {
-        var result = bookingService.Cancel(id, User.GetUserId());
+        var result = await bookingService.CancelAsync(id, User.GetUserId());
         if (result.Error is BookingError.BookingNotFound or BookingError.NotOwner) return NotFound();
 
         if (result.Success) TempData[SuccessKey] = "Aula cancelada. O horário foi liberado para outros alunos.";
@@ -152,11 +158,11 @@ public class BookingsController(
     // ---------------------------------------------------------------- review
 
     [HttpGet("reservas/{id:int}/avaliar")]
-    public IActionResult Review(int id)
+    public async Task<IActionResult> Review(int id)
     {
-        var vm = BuildReview(id, new ReviewFormModel());
+        var vm = await BuildReviewAsync(id, new ReviewFormModel());
         if (vm is null) return NotFound();
-        if (vm.Booking.Status != BookingStatus.Completed || bookingService.HasReview(id))
+        if (vm.Booking.Status != BookingStatus.Completed || await bookingService.HasReviewAsync(id))
         {
             TempData[ErrorKey] = "Essa aula não pode ser avaliada.";
             return RedirectToAction(nameof(Index), new { aba = "historico" });
@@ -165,15 +171,15 @@ public class BookingsController(
     }
 
     [HttpPost("reservas/{id:int}/avaliar")]
-    public IActionResult Review(int id, ReviewFormModel form)
+    public async Task<IActionResult> Review(int id, ReviewFormModel form)
     {
         if (!ModelState.IsValid)
         {
-            var vm = BuildReview(id, form);
+            var vm = await BuildReviewAsync(id, form);
             return vm is null ? NotFound() : View(vm);
         }
 
-        var result = bookingService.AddReview(id, User.GetUserId(), User.Identity?.Name ?? "Aluno", form.Rating, form.Comment);
+        var result = await bookingService.AddReviewAsync(id, User.GetUserId(), User.Identity?.Name ?? "Aluno", form.Rating, form.Comment);
         if (result.Error is BookingError.BookingNotFound or BookingError.NotOwner) return NotFound();
 
         if (result.Success) TempData[SuccessKey] = "Obrigado! Sua avaliação foi publicada.";
@@ -185,28 +191,28 @@ public class BookingsController(
 
     // ---------------------------------------------------------------- helpers
 
-    private CheckoutViewModel BuildCheckout(Booking booking, PaymentFormModel form) => new()
+    private async Task<CheckoutViewModel> BuildCheckoutAsync(Booking booking, PaymentFormModel form) => new()
     {
         Booking = booking,
-        Instructor = instructors.GetById(booking.InstructorId)!,
-        Slot = slots.GetById(booking.SlotId)!,
-        Now = clock.Now,
+        Instructor = (await instructors.GetByIdAsync(booking.InstructorId))!,
+        Slot = (await slots.GetByIdAsync(booking.SlotId))!,
+        Now = clock.UtcNow,
         Form = form,
         // MOCK: looks like a PIX "copia e cola" code but is NOT a valid payload (no real payment happens).
         PixCode = $"00020126360014BR.GOV.BCB.PIX0114DIRIJA{booking.Id:D8}5204000053039865406{booking.Price:0.00}5802BR6009SAO PAULO6304A1B2"
             .Replace(',', '.')
     };
 
-    private ReviewViewModel? BuildReview(int id, ReviewFormModel form)
+    private async Task<ReviewViewModel?> BuildReviewAsync(int id, ReviewFormModel form)
     {
-        var result = bookingService.GetForStudent(id, User.GetUserId());
+        var result = await bookingService.GetForStudentAsync(id, User.GetUserId());
         if (!result.Success) return null;
         var b = result.Booking!;
         return new ReviewViewModel
         {
             Booking = b,
-            Instructor = instructors.GetById(b.InstructorId)!,
-            Slot = slots.GetById(b.SlotId)!,
+            Instructor = (await instructors.GetByIdAsync(b.InstructorId))!,
+            Slot = (await slots.GetByIdAsync(b.SlotId))!,
             Form = form
         };
     }
@@ -225,8 +231,8 @@ public class BookingsController(
         if (expiry.Length == 5 && expiry[2] == '/' &&
             int.TryParse(expiry[..2], out var month) && int.TryParse(expiry[3..], out var year) && month is >= 1 and <= 12)
         {
-            var lastDay = new DateTime(2000 + year, month, 1).AddMonths(1);
-            validExpiry = lastDay > clock.Now;
+            var firstDayAfter = new DateTime(2000 + year, month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1);
+            validExpiry = firstDayAfter > clock.UtcNow;
         }
         if (!validExpiry) ModelState.AddModelError(nameof(form.CardExpiry), "Validade inválida (use MM/AA).");
 

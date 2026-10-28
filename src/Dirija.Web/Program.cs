@@ -1,7 +1,9 @@
 using System.Globalization;
 using Dirija.Core.Abstractions;
-using Dirija.Core.InMemory;
 using Dirija.Core.Services;
+using Dirija.Infrastructure;
+using Dirija.Infrastructure.Seed;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Localization;
@@ -40,20 +42,18 @@ builder.Services.AddAuthorization(o =>
     o.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
 });
 
-// --- Domain (in-memory; swap for EF Core repositories later) --------------------------------
+// --- Domain + persistence (EF Core / SQLite) ------------------------------------------------
 builder.Services.Configure<BookingOptions>(builder.Configuration.GetSection(BookingOptions.SectionName));
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<BookingOptions>>().Value);
 builder.Services.AddSingleton<IClock, SystemClock>();
-builder.Services.AddSingleton(sp => SeedData.Create(sp.GetRequiredService<IClock>().Now));
-builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
-builder.Services.AddSingleton<IInstructorRepository, InMemoryInstructorRepository>();
-builder.Services.AddSingleton<ISlotRepository, InMemorySlotRepository>();
-builder.Services.AddSingleton<IBookingRepository, InMemoryBookingRepository>();
-builder.Services.AddSingleton<IReviewRepository, InMemoryReviewRepository>();
-builder.Services.AddSingleton<InstructorSearchService>();
-builder.Services.AddSingleton<BookingService>();
+builder.Services.AddDirijaInfrastructure(SqliteConnectionString);
+builder.Services.AddScoped<InstructorSearchService>();
+builder.Services.AddScoped<BookingService>();
 
 var app = builder.Build();
+
+// Migrations, first-run seed and agenda top-up. Database:ResetOnStartup=true recreates the database (demo reset).
+await DbInitializer.InitializeAsync(app.Services, app.Configuration.GetValue<bool>("Database:ResetOnStartup"));
 
 var ptBr = new CultureInfo("pt-BR");
 app.UseRequestLocalization(new RequestLocalizationOptions
@@ -82,6 +82,24 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+// Resolved lazily (per DbContext options build) so integration tests can override the connection string.
+// Relative "Data Source" paths are resolved against the web project's content root.
+static string SqliteConnectionString(IServiceProvider sp)
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var provider = config["Database:Provider"] ?? "Sqlite";
+    if (!provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+        throw new NotSupportedException($"Database:Provider '{provider}' ainda não é suportado (use 'Sqlite').");
+
+    var csb = new SqliteConnectionStringBuilder(config.GetConnectionString("Dirija") ?? "Data Source=App_Data/dirija.db");
+    if (csb.DataSource != ":memory:" && !Path.IsPathRooted(csb.DataSource))
+    {
+        csb.DataSource = Path.Combine(sp.GetRequiredService<IWebHostEnvironment>().ContentRootPath, csb.DataSource);
+    }
+    if (Path.GetDirectoryName(csb.DataSource) is { Length: > 0 } dir) Directory.CreateDirectory(dir);
+    return csb.ToString();
+}
 
 // Exposed for WebApplicationFactory in integration tests.
 public partial class Program;
