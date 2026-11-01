@@ -1,0 +1,17 @@
+﻿Item;Natureza;Quantidade;Unidade;Valor unitário (R$);Valor total (R$);Atividades;Fonte;Memória de cálculo
+Nuvem: hospedagem e PostgreSQL/PostGIS gerenciado;Serviço de terceiros (PJ);18;ambiente-mês;350,00;6300,00;A1-A7;FAPESP;2 ambientes (homologação e experimentos) x 9 meses
+Testes de carga em nuvem;Serviço de terceiros (PJ);1;serviço;2000,00;2000,00;A5;FAPESP;2.000 VUH x US$ 0,15 x R$ 5,50 = R$ 1.650 + R$ 350 de aumento temporário do banco
+Consultoria jurídica;Serviço de terceiros (PJ);40;hora;250,00;10000,00;A7;FAPESP;Termos de uso, LGPD, contrato com o instrutor, Res. CONTRAN 1.020/2025 e ADI 7978
+Avaliação heurística e de acessibilidade independente;Serviço de terceiros (PJ);1;serviço;5000,00;5000,00;A6;FAPESP;3 avaliadores x 8 h x R$ 200 + R$ 200 de relatório
+Smartphone Android de entrada;Material permanente;1;unidade;1200,00;1200,00;A4, A6;FAPESP;Teste da interface mobile
+Smartphone Android intermediário;Material permanente;1;unidade;2000,00;2000,00;A4, A6;FAPESP;Teste da interface mobile
+iPhone de entrada;Material permanente;1;unidade;4000,00;4000,00;A4, A6;FAPESP;Teste da interface mobile
+Linhas pré-pagas com plano de dados;Material de consumo;27;linha-mês;50,00;1350,00;A4, A6;FAPESP;3 linhas x 9 meses
+TOTAL SOLICITADO À FAPESP;;;;;31850,00;;FAPESP;
+Registro de marca no INPI (2 classes);Taxa;2;classe;440,00;880,00;A7;Parcela para Custos de Infraestrutura Direta;Estimativa com desconto, a confirmar na tabela vigente do INPI
+Registro de programa de computador no INPI;Taxa;1;pedido;a confirmar;a confirmar;A7;Parcela para Custos de Infraestrutura Direta;Confirmar na Portaria GM/MDIC nº 110/2025
+Alexsandro de Souza Campos (PqR);Contrapartida (horas);936;hora;50,00;46800,00;A1, A5, A7;Empresa;24 h/semana x 39 semanas
+Matheus [sobrenome];Contrapartida (horas);390;hora;50,00;19500,00;A2, A3, A5;Empresa;10 h/semana x 39 semanas
+Ana Luisa [sobrenome];Contrapartida (horas);390;hora;50,00;19500,00;A4, A6;Empresa;10 h/semana x 39 semanas
+Gabriel [sobrenome];Contrapartida (horas);390;hora;50,00;19500,00;A6, A7;Empresa;10 h/semana x 39 semanas
+TOTAL CONTRAPARTIDA;;2106;hora;;105300,00;;Empresa;
