@@ -72,10 +72,10 @@ Fonte: https://fapesp.br/pipe/normas/ e https://fapesp.br/rt
 
 | # | Termos | Escopo | Resultados | Documentos mais próximos |
 |---|---|---|---|---|
-| 1 | ("driving instructor") (booking OR scheduling) (location OR geolocation) | Mundial | 104 | **CA3179758A1** "Driver training method" (app que conecta aluno e instrutor, com ranking) — ativo no CA, não ativo nos EUA, sem família no BR. **JP2024009466A** (servidor de gestão de autoescola) — só JP. **US20260220571A1** (instrução de direção em carona) — só US. |
-| 2 | ("driving lesson") (booking OR reservation) (instructor) (learner OR student) | Mundial | 27 | WO2011126379A1 (registro de aulas; não ativo); JP7880574B2 (autoescola online; só JP). |
+| 1 | ("driving instructor") (booking OR scheduling) (location OR geolocation) | Mundial | 104 | **CA3179758A1** "Driver training method" (Krishna Parajuli; app que conecta aluno e instrutor por proximidade, idioma e ranking, com agenda e pagamento) — **pedido pendente** no CA; família US não ativa; sem BR. **US20260220571A1** "Method for driving instruction for ride-sharing solution" (Jarvis Earl Gandy) — pendente, só US. **JP2024009466A** "Driving school management server and computer program" (Park24 Co., Ltd.; dados de alunos para seguradoras) — pendente, só JP. |
+| 2 | ("driving lesson") (booking OR reservation) (instructor) (learner OR student) | Mundial | 27 | WO2011126379A1 "A system and method for drivers training" (Driving Performance Solutions AS; câmeras/sensores no veículo) — extinto. JP7880574B2 "Online driving school system" (Profit Co., Ltd.; aulas teóricas on-line) — **concedida** em 26/06/2026, vigente até 2042, só JP. |
 | 3 | (instrutor) (aula OR aulas) (agendamento OR reserva) | Brasil | 4 | Nenhum sobre instrução de trânsito (eventos, vídeo, gestão educacional e treino físico). |
-| 4 | ("double booking") (prevent OR prevention) ("time slot") (concurrent OR concurrency) | Mundial | 34 | US20240221041A1 (alerta de conflito em calendário; só US). Patentes de *locking* em banco (ex.: US12204953B2, Stripe) cobrem mecanismos internos de SGBD, não o uso de controle otimista padrão. |
+| 4 | ("double booking") (prevent OR prevention) ("time slot") (concurrent OR concurrency) | Mundial | 34 | US20240221041A1 "Transactional platform" (Mine Zero GmbH; plataforma genérica de venda de serviços e tempo) — abandonado; família US/EP/WO sem BR (a patente-mãe US 11,651,401 foi concedida, só nos EUA). **Corrigido:** a descrição anterior ("alerta de conflito em calendário") estava errada. Patentes de *locking* em banco (ex.: US12204953B2, Stripe) cobrem mecanismos internos de SGBD, não o uso de controle otimista padrão. |
 
 **Conclusão (texto usado na seção 5):** não foram identificadas patentes com efeito no Brasil que impeçam a operação. Os documentos mais próximos são estrangeiros e sem família brasileira, e patentes valem só no território onde foram concedidas. Pela Lei 9.279/1996, art. 10, métodos comerciais e programas de computador em si não são considerados invenção. É uma busca preliminar, não um parecer de liberdade de operação.
 
@@ -85,6 +85,7 @@ Fonte: https://fapesp.br/pipe/normas/ e https://fapesp.br/rt
 3. Filtrar pela IPC G06Q 10/02 (reservas) e G09B 19/16 (ensino de condução de veículos).
 4. Anotar número, título, situação e data de cada resultado e incluir na Tabela 5 do projeto (e na seção 12b).
 5. Em Marcas, pesquisar "DIRIJA" nas classes 9, 35, 41 e 42 antes do pedido de registro.
+   - **Feito em 01/11/2026 (pesquisa básica, termo "Dirija!"): nenhum resultado** (print enviado pela equipe; base atualizada até 27/10/2026). Falta repetir pelo radical "DIRIJA".
 
 ## 7. Concorrentes (verificados por site)
 
@@ -146,7 +147,7 @@ Cada afirmação de "resultado preliminar" do projeto foi ligada ao código ou t
 3. Busca no INPI (roteiro na seção 6).
 4. Taxas do INPI: confirmar na Tabela de Retribuições vigente (Portaria GM/MDIC nº 110/2025); os valores usados são estimativas.
 5. Endereço da sede: fictício no texto.
-6. Títulos oficiais das patentes 2 a 6 da seção 12b: o Google Patents recusou o acesso automático (HTTP 503) em 01/11/2026; o texto usa descrições resumidas e diz isso. Conferir os títulos e titulares nas páginas de cada documento.
+6. ~~Títulos oficiais das patentes~~ Resolvido: títulos, titulares, datas, situação e família conferidos pela equipe nas páginas do Google Patents (prints enviados em 01/11/2026). Nenhuma família tem BR. Duas descrições estavam erradas e foram corrigidas (WO2011126379A1 e US20240221041A1). A busca no INPI não será feita: o modelo FAPESP pede a lista e a análise das principais patentes (itens 4, 5 e 12b) e cita INPI e Google Patents só como exemplos de bases.
 7. Disciplinas (seção 10): tiradas da grade do Júpiter, curso 86200 (EACH, SI; matutino 202 e noturno 204 são iguais), obrigatórias do 1º ao 6º período ideal, consultada em 24/10/2026. A grade publicada é a versão com início em 01/01/2027; conferir no histórico escolar de cada membro se a versão de ingresso (2024) tem as mesmas obrigatórias. Optativas cursadas variam por pessoa e não foram listadas. Criar ORCID (obrigatório na Súmula) e Lattes dos cinco.
 9. Consultor jurídico: a norma 8.1 c.2 exige que o consultor esteja na equipe, com Súmula e comprovação de qualificação. Nome a definir.
 8. Preços de nuvem (R$ 350 por ambiente-mês) e de smartphones: estimativas; substituir por orçamentos na submissão. Câmbio de R$ 5,50/US$ é premissa.
