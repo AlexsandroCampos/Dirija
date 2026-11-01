@@ -141,11 +141,12 @@ Cada afirmação de "resultado preliminar" do projeto foi ligada ao código ou t
 
 ## 9. Pendências para a equipe
 
-1. Sobrenomes de Matheus, Ana Luisa e Gabriel (`[sobrenome]` no texto).
+1. ~~Sobrenomes~~ Resolvido: nomes completos informados. A equipe passou a ter **5 membros** (dois Matheus); contrapartida recalculada para 2.496 h (R$ 124.800). Confirmar que são mesmo cinco pessoas.
 2. **Carga horária do PqR:** a norma exige ≥ 24 h/semana se o PqR detém o conhecimento crítico. O texto usa 24 h para Alexsandro e 10 h para os demais. Se não for possível, indicar outro membro como Pesquisador Principal com ≥ 24 h.
 3. Busca no INPI (roteiro na seção 6).
 4. Taxas do INPI: confirmar na Tabela de Retribuições vigente (Portaria GM/MDIC nº 110/2025); os valores usados são estimativas.
 5. Endereço da sede: fictício no texto.
 6. Títulos oficiais das patentes 2 a 6 da seção 12b: o Google Patents recusou o acesso automático (HTTP 503) em 01/11/2026; o texto usa descrições resumidas e diz isso. Conferir os títulos e titulares nas páginas de cada documento.
-7. Disciplinas já cursadas (seção 10) e currículos Lattes dos quatro membros: conferir antes da submissão.
+7. Disciplinas (seção 10): tiradas da grade do Júpiter, curso 86200 (EACH, SI; matutino 202 e noturno 204 são iguais), obrigatórias do 1º ao 6º período ideal, consultada em 24/10/2026. A grade publicada é a versão com início em 01/01/2027; conferir no histórico escolar de cada membro se a versão de ingresso (2024) tem as mesmas obrigatórias. Optativas cursadas variam por pessoa e não foram listadas. Criar ORCID (obrigatório na Súmula) e Lattes dos cinco.
+9. Consultor jurídico: a norma 8.1 c.2 exige que o consultor esteja na equipe, com Súmula e comprovação de qualificação. Nome a definir.
 8. Preços de nuvem (R$ 350 por ambiente-mês) e de smartphones: estimativas; substituir por orçamentos na submissão. Câmbio de R$ 5,50/US$ é premissa.

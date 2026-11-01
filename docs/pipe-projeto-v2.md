@@ -16,7 +16,7 @@ A equipe já construiu um produto mínimo viável (MVP) em ASP.NET Core 8 com ba
 
 As metas são: tempo de resposta da busca no percentil 95 abaixo de 300 ms com 10 mil instrutores cadastrados, nenhuma reserva duplicada nos testes de carga, pelo menos 80% de sucesso nas tarefas de busca e reserva e nota média de pelo menos 70 no questionário SUS. O projeto também vai testar com instrutores a aceitação da taxa de 15% por aula.
 
-O projeto dura 9 meses e solicita R$ 31.850,00 para serviços de nuvem, testes de carga, consultoria jurídica, avaliação independente de usabilidade, smartphones de teste e linhas de dados. Não há bolsas. A empresa oferece como contrapartida 2.106 horas de trabalho dos quatro sócios, estudantes de Sistemas de Informação da USP. O resultado esperado é uma prova de conceito medida e documentada, que indique se a solução é viável tecnicamente e se há interesse do mercado antes de uma Fase 2.
+O projeto dura 9 meses e solicita R$ 31.850,00 para serviços de nuvem, testes de carga, consultoria jurídica, avaliação independente de usabilidade, smartphones de teste e linhas de dados. Não há bolsas. A empresa oferece como contrapartida 2.496 horas de trabalho dos cinco sócios, estudantes de Sistemas de Informação da USP. O resultado esperado é uma prova de conceito medida e documentada, que indique se a solução é viável tecnicamente e se há interesse do mercado antes de uma Fase 2.
 
 | 3 \- Objetivos  |
 | :---- |
@@ -172,10 +172,10 @@ Tabela 6 — Funcionalidades implementadas no MVP e previstas na Fase 1.
 | Atividade | Incerteza a vencer | Experimento ou entrega | Responsável | Meses |
 | :---- | :---- | :---- | :---- | :---- |
 | A1. Modelo de dados e migração para PostgreSQL/PostGIS | O modelo atual (versão por horário, datas em UTC) funciona no PostgreSQL sem mudar as regras de negócio? | Migração; os 63 testes rodando nos dois bancos; gerador de base sintética | Alexsandro | 1–2 |
-| A2. Busca geoespacial | Até que volume a estratégia do MVP atende à meta? Quanto o índice GiST melhora? | Comparação retângulo + Haversine × `ST_DWithin` × vizinho mais próximo, com 1 mil, 10 mil e 100 mil instrutores | Matheus | 2–4 |
-| A3. Reserva concorrente | Qual estratégia mantém zero duplicidade com menor latência e menos rejeições quando muitos disputam o mesmo horário? | Comparação controle otimista × `SELECT ... FOR UPDATE` × restrição de exclusão sobre intervalos de tempo | Matheus | 3–5 |
+| A2. Busca geoespacial | Até que volume a estratégia do MVP atende à meta? Quanto o índice GiST melhora? | Comparação retângulo + Haversine × `ST_DWithin` × vizinho mais próximo, com 1 mil, 10 mil e 100 mil instrutores | Matheus S. P. de Lima | 2–4 |
+| A3. Reserva concorrente | Qual estratégia mantém zero duplicidade com menor latência e menos rejeições quando muitos disputam o mesmo horário? | Comparação controle otimista × `SELECT ... FOR UPDATE` × restrição de exclusão sobre intervalos de tempo | Matheus M. Alfradique | 3–5 |
 | A4. Interface e painel do instrutor | O instrutor consegue publicar a agenda sozinho pelo celular? | Painel mínimo do instrutor; cadastro de usuários; ajustes de interface | Ana Luisa | 3–7 |
-| A5. Testes de carga em nuvem | Os resultados de A2 e A3 se mantêm com tráfego realista em ambiente de nuvem? | Rodadas com até 500 usuários virtuais; relatório de desempenho | Matheus e Alexsandro | 6–7 |
+| A5. Testes de carga em nuvem | Os resultados de A2 e A3 se mantêm com tráfego realista em ambiente de nuvem? | Rodadas com até 500 usuários virtuais; relatório de desempenho | Matheus M. Alfradique e Alexsandro | 6–7 |
 | A6. Usabilidade e validação de mercado | Alunos e instrutores completam as tarefas? Aceitam a taxa de 15%? | Duas rodadas com alunos, uma com instrutores, avaliação heurística externa, entrevistas | Ana Luisa e Gabriel | 6–9 |
 | A7. Consolidação, aspectos jurídicos e propriedade intelectual | A operação é compatível com a Resolução 1.020/2025 e a LGPD? Há patentes no INPI que afetem a operação? | Termos de uso e política de privacidade; busca no INPI; pedido de marca; relatório final | Alexsandro (Gabriel no apoio) | 7–9 |
 
@@ -250,21 +250,21 @@ No cenário conservador, a receita do quinto ano (R$ 328 mil) cobre uma operaç�
 | 8 \- Orçamento detalhado e justificado |
 | :---- |
 
-O orçamento segue as atividades da Tabela 7 e o cronograma da seção 11. Não são solicitadas bolsas: os quatro membros da equipe são sócios e graduandos, e a Bolsa de Pesquisa em Empresa exige graduação completa. O trabalho da equipe entra como contrapartida (seção 9c). Não há compra de licenças de software: todas as ferramentas usadas são livres ou gratuitas. A Reserva Técnica (Benefícios Complementares e Parcela para Custos de Infraestrutura Direta) é calculada pela FAPESP e não está incluída no total. As taxas do INPI para registro de marca e de programa de computador serão pagas com a Parcela para Custos de Infraestrutura Direta.
+O orçamento segue as atividades da Tabela 7 e o cronograma da seção 11. Não são solicitadas bolsas: os cinco membros da equipe são sócios e graduandos, e a Bolsa de Pesquisa em Empresa exige graduação completa. O trabalho da equipe entra como contrapartida (seção 9c). Não há compra de licenças de software: todas as ferramentas usadas são livres ou gratuitas. A Reserva Técnica (Benefícios Complementares e Parcela para Custos de Infraestrutura Direta) é calculada pela FAPESP e não está incluída no total. As taxas do INPI para registro de marca e de programa de computador serão pagas com a Parcela para Custos de Infraestrutura Direta.
 
 | Item | Natureza | Memória de cálculo | Atividades | Valor (R$) |
 | :---- | :---- | :---- | :---- | ----: |
 | Nuvem: hospedagem da aplicação e PostgreSQL/PostGIS gerenciado | Serviço de terceiros (PJ) | 2 ambientes (homologação e experimentos) × R$ 350/mês × 9 meses | A1–A7 | 6.300,00 |
 | Serviço de testes de carga em nuvem | Serviço de terceiros (PJ) | 4 rodadas × 500 usuários virtuais × 1 h = 2.000 VUH × US$ 0,15 × R$ 5,50 = R$ 1.650; aumento temporário do banco durante os testes: R$ 350 | A5 | 2.000,00 |
-| Consultoria jurídica | Serviço de terceiros (PJ) | 40 h × R$ 250/h: termos de uso, política de privacidade (LGPD), contrato entre plataforma e instrutor e análise da Resolução 1.020/2025 e da ADI 7978 | A7 | 10.000,00 |
-| Avaliação heurística e de acessibilidade independente | Serviço de terceiros (PJ) | 3 avaliadores × 8 h × R$ 200/h ≈ R$ 4.800, mais relatório consolidado (R$ 200) | A6 | 5.000,00 |
+| Consultoria jurídica | Serviço de terceiros: consultoria (advogado, incluído na equipe como Consultor) | 40 h × R$ 250/h: termos de uso, política de privacidade (LGPD), contrato entre plataforma e instrutor e análise da Resolução 1.020/2025 e da ADI 7978 | A7 | 10.000,00 |
+| Avaliação heurística e de acessibilidade independente | Serviço de terceiros (PJ: empresa de UX) | 3 avaliadores × 8 h × R$ 200/h ≈ R$ 4.800, mais relatório consolidado (R$ 200) | A6 | 5.000,00 |
 | Smartphones de teste | Material permanente | 1 Android de entrada (R$ 1.200) + 1 Android intermediário (R$ 2.000) + 1 iPhone de entrada (R$ 4.000) | A4, A6 | 7.200,00 |
 | Linhas pré-pagas com plano de dados | Material de consumo | 3 linhas × R$ 50/mês × 9 meses, para testar a interface em rede móvel | A4, A6 | 1.350,00 |
 | **Total solicitado** | | | | **31.850,00** |
 
 Tabela 11 — Orçamento solicitado à FAPESP.
 
-**Justificativas.** A nuvem é necessária porque os experimentos A2, A3 e A5 precisam de máquinas iguais em todas as rodadas, o que não se consegue com os notebooks dos sócios. O provedor será escolhido entre os que oferecem PostgreSQL gerenciado com PostGIS; o valor mensal é uma estimativa feita nas calculadoras de preço dos provedores e será confirmado na submissão. O preço de US$ 0,15 por hora de usuário virtual é o do Azure Load Testing, e o câmbio de R$ 5,50 por dólar é uma premissa. As duas consultorias somam R$ 15.000, abaixo do limite de 10% do teto da Fase 1, e não tratam de atividade crítica da pesquisa. A avaliação heurística externa segue a recomendação de usar avaliadores que não participaram do desenvolvimento (NIELSEN, 1993). Os smartphones cobrem as faixas de aparelho mais comuns entre estudantes, porque o uso previsto é no celular. Os preços de material são estimativas de varejo e serão atualizados com orçamentos na submissão.
+**Justificativas.** A nuvem é necessária porque os experimentos A2, A3 e A5 precisam de máquinas iguais em todas as rodadas, o que não se consegue com os notebooks dos sócios. O provedor será escolhido entre os que oferecem PostgreSQL gerenciado com PostGIS; o valor mensal é uma estimativa feita nas calculadoras de preço dos provedores e será confirmado na submissão. O preço de US$ 0,15 por hora de usuário virtual é o do Azure Load Testing, e o câmbio de R$ 5,50 por dólar é uma premissa. A consultoria jurídica é o único item de consultoria (R$ 10.000, abaixo do limite de 10% do teto da Fase 1, que é de R$ 30.000); como depende da qualificação pessoal do advogado, ele entra na equipe com a função Consultor (seção 10). A avaliação heurística será contratada de uma empresa de UX, como serviço de pessoa jurídica. Nenhum dos dois serviços trata de atividade crítica da pesquisa. Cada serviço terá proposta comercial e qualificação do prestador anexadas à submissão. A avaliação heurística externa segue a recomendação de usar avaliadores que não participaram do desenvolvimento (NIELSEN, 1993). Os smartphones cobrem as faixas de aparelho mais comuns entre estudantes, porque o uso previsto é no celular. Os preços de material são estimativas de varejo e serão atualizados com orçamentos na submissão.
 
 **Itens pagos com a Parcela para Custos de Infraestrutura Direta.** Pedido de registro da marca "Dirija!" em duas classes (estimativa de R$ 440 por classe com desconto para microempresa, a confirmar na tabela de retribuições do INPI vigente) e pedido de registro do programa de computador (valor a confirmar na mesma tabela).
 
@@ -273,39 +273,42 @@ Tabela 11 — Orçamento solicitado à FAPESP.
 | Membro | Horas/semana | Semanas | Horas | Valor-hora (R$) | Valor (R$) |
 | :---- | ----: | ----: | ----: | ----: | ----: |
 | Alexsandro de Souza Campos (PqR) | 24 | 39 | 936 | 50 | 46.800,00 |
-| Matheus [sobrenome] | 10 | 39 | 390 | 50 | 19.500,00 |
-| Ana Luisa [sobrenome] | 10 | 39 | 390 | 50 | 19.500,00 |
-| Gabriel [sobrenome] | 10 | 39 | 390 | 50 | 19.500,00 |
-| **Total** | | | **2.106** | | **105.300,00** |
+| Matheus Silva Portes de Lima | 10 | 39 | 390 | 50 | 19.500,00 |
+| Matheus Machado Alfradique | 10 | 39 | 390 | 50 | 19.500,00 |
+| Ana Luisa Oliveira da Silva | 10 | 39 | 390 | 50 | 19.500,00 |
+| Gabriel Marchesano | 10 | 39 | 390 | 50 | 19.500,00 |
+| **Total** | | | **2.496** | | **124.800,00** |
 
-Tabela 12 — Contrapartida em horas de trabalho dos sócios (9 meses ≈ 39 semanas). Os quatro notebooks dos sócios também são usados no projeto, sem valoração.
+Tabela 12 — Contrapartida em horas de trabalho dos sócios (9 meses ≈ 39 semanas). Os cinco notebooks dos sócios também são usados no projeto, sem valoração.
 
 | 9 \- Informações sobre a empresa |
 | :---- |
 
-**a) Informações comerciais e administrativas.** Dirija Tecnologia Ltda., empresa a constituir, como permitido na Fase 1 do PIPE, depois da aprovação do mérito. O nome é provisório. Sócios: Alexsandro de Souza Campos (administrador, com poderes de representação), Matheus [sobrenome], Ana Luisa [sobrenome] e Gabriel [sobrenome]. A divisão das quotas será definida no contrato social. Endereço previsto: [endereço fictício a definir], São Paulo/SP. Não há empregados; os quatro sócios trabalham no projeto. A empresa não está incubada e não tem unidades em outros estados.
+**a) Informações comerciais e administrativas.** Dirija Tecnologia Ltda., empresa a constituir, como permitido na Fase 1 do PIPE, depois da aprovação do mérito. O nome é provisório. Sócios: Alexsandro de Souza Campos (administrador, com poderes de representação), Matheus Silva Portes de Lima, Matheus Machado Alfradique, Ana Luisa Oliveira da Silva e Gabriel Marchesano. A divisão das quotas será definida no contrato social. Endereço previsto: [endereço fictício a definir], São Paulo/SP. Não há empregados; os cinco sócios trabalham no projeto. A empresa não está incubada e não tem unidades em outros estados.
 
 A criação da empresa se justifica pela abertura do mercado de instrução prática a autônomos, descrita na seção 4. O desenvolvimento começou como trabalho acadêmico no curso de Sistemas de Informação. As ações já realizadas são o teste de protótipo com 6 alunos, o MVP com 63 testes automatizados e a pesquisa de concorrentes e de patentes desta proposta.
 
 **b) Informações sobre atividades da empresa em P&D.** A atividade de P&D da empresa é este projeto. O acervo atual é o código-fonte do MVP (repositório Git da equipe, ainda sem registro) e os resultados do teste de protótipo. Não há patentes. A metodologia de proteção prevê: código em repositório com acesso restrito aos sócios; termo de confidencialidade e de cessão de direitos assinado por todos os sócios antes do início do projeto; registro do programa de computador e pedido de marca no INPI (seção 5). A empresa se compromete a garantir as 24 horas semanais do PqR e as 10 horas semanais de cada colaborador durante os 9 meses.
 
-**c) Contrapartida e busca de outros fundos.** A contrapartida está na Tabela 12: 2.106 horas de trabalho dos sócios, equivalentes a R$ 105.300,00, mais o uso dos equipamentos pessoais. Não há propostas equivalentes ou complementares submetidas a outras agências. A equipe pretende se inscrever em programas de pré-incubação da universidade durante a Fase 1.
+**c) Contrapartida e busca de outros fundos.** A contrapartida está na Tabela 12: 2.496 horas de trabalho dos sócios, equivalentes a R$ 124.800,00, mais o uso dos equipamentos pessoais. Não há propostas equivalentes ou complementares submetidas a outras agências. A equipe pretende se inscrever em programas de pré-incubação da universidade durante a Fase 1.
 
-**d) Infraestrutura existente.** Quatro notebooks pessoais dos sócios, usados para desenvolvimento; repositório Git com 63 testes automatizados; ambiente de desenvolvimento com .NET 8 e ferramentas gratuitas. Não há instalações físicas próprias: a equipe trabalha de forma remota e nos espaços da universidade. As telas do MVP estão na Figura 1.
+**d) Infraestrutura existente.** Cinco notebooks pessoais dos sócios, usados para desenvolvimento; repositório Git com 63 testes automatizados; ambiente de desenvolvimento com .NET 8 e ferramentas gratuitas. Não há instalações físicas próprias: a equipe trabalha de forma remota e nos espaços da universidade. As telas do MVP estão na Figura 1.
 
 | 10 \- Descrição da equipe |
 | :---- |
 
 **Qualificação do Pesquisador Responsável.** Alexsandro de Souza Campos é estudante do 6º semestre do bacharelado em Sistemas de Informação da Universidade de São Paulo (USP) e reside no estado de São Paulo. Projetou a arquitetura em camadas do MVP e implementou a persistência em SQLite com Entity Framework Core, o controle de concorrência otimista e os testes de reserva simultânea descritos na seção 4. Como detém o conhecimento crítico do projeto, vai dedicar 24 horas semanais, conforme exigido pelas normas do PIPE.
 
-**Equipe.** Os quatro membros cursam o mesmo semestre do mesmo bacharelado e já cursaram disciplinas de programação, bancos de dados e engenharia de software. A divisão de papéis segue o trabalho já feito no MVP e no teste de protótipo. A experiência da equipe é acadêmica; a falta de experiência profissional é compensada pelo escopo pequeno da Fase 1 e pela busca de orientação de docentes da universidade.
+**Equipe.** Os cinco membros cursam o 6º semestre do bacharelado em Sistemas de Informação da Escola de Artes, Ciências e Humanidades (EACH-USP). Já concluíram as disciplinas obrigatórias dos cinco primeiros semestres, entre elas as diretamente ligadas aos desafios do projeto: Algoritmos e Estruturas de Dados I e II (ACH2023, ACH2024), Bancos de Dados 1 e 2 (ACH2004, ACH2025), Desenvolvimento de Sistemas de Informação Distribuídos (ACH2147), Análise, Projeto e Interface Humano-Computador (ACH2005), Sistemas Operacionais (ACH2044), Redes de Computadores (ACH2026), Introdução à Estatística (ACH2053) e Introdução à Administração e Economia para Computação (ACH2063). No semestre atual cursam Engenharia de Sistemas de Informação I (ACH2006), Gestão de Projetos de Tecnologia da Informação (ACH2027) e Empreendedorismo em Informática (ACH2008), disciplina em que esta proposta foi elaborada. A divisão de papéis segue o trabalho já feito no MVP e no teste de protótipo. A experiência da equipe é acadêmica; a falta de experiência profissional é compensada pelo escopo pequeno da Fase 1 e pela busca de orientação de docentes da universidade.
 
 | Nome | Responsabilidade | Atividade | Período de execução das atividades |
 | ----- | ----- | ----- | ----- |
-| Alexsandro de Souza Campos — Pesquisador Responsável (24 h/semana) | Coordenação técnica e administrativa; arquitetura e modelo de dados; aspectos jurídicos e de propriedade intelectual. Desafio: manter as regras de reserva corretas na migração para PostgreSQL e sob carga. | A1 (migração e base sintética), A5 (testes de carga, com Matheus), A7 (consolidação, INPI, relatório final) | Meses 1 a 9 |
-| Matheus [sobrenome] — Colaborador, backend (10 h/semana) | Experimentos de busca espacial e de reserva concorrente. Desafio: atingir p95 < 300 ms e zero duplicidade, escolhendo as estratégias com base em medições. | A2 (busca geoespacial), A3 (reserva concorrente), A5 (testes de carga) | Meses 2 a 7 |
-| Ana Luisa [sobrenome] — Colaboradora, frontend e UX (10 h/semana) | Interface mobile e painel do instrutor; condução dos testes de usabilidade. Desafio: atingir ≥ 80% de sucesso nas tarefas e SUS ≥ 70. | A4 (interface e painel), A6 (usabilidade) | Meses 3 a 9 |
-| Gabriel [sobrenome] — Colaborador, negócios e mercado (10 h/semana) | Validação das premissas do modelo de negócio; recrutamento de participantes. Desafio: medir a aceitação da taxa de 15% e o número de aulas por aluno. | A6 (entrevistas e recrutamento), A7 (apoio jurídico e de marca), revisão da seção 7 | Meses 6 a 9 |
+| Alexsandro de Souza Campos — Pesquisador Responsável (24 h/semana) | Coordenação técnica e administrativa; arquitetura e modelo de dados; aspectos jurídicos e de propriedade intelectual. Desafio: manter as regras de reserva corretas na migração para PostgreSQL e sob carga. | A1 (migração e base sintética), A5 (testes de carga, com Matheus M. Alfradique), A7 (consolidação, INPI, relatório final) | Meses 1 a 9 |
+| Matheus Silva Portes de Lima — Colaborador, backend: busca (10 h/semana) | Experimentos de busca espacial. Desafio: atingir p95 < 300 ms com 10 mil instrutores, sem omissões nem inclusões indevidas, escolhendo a estratégia de índice com base em medições. | A2 (busca geoespacial) e apoio a A4 (API de busca usada pela interface) | Meses 2 a 5 |
+| Matheus Machado Alfradique — Colaborador, backend: reserva e carga (10 h/semana) | Experimentos de reserva concorrente e testes de carga. Desafio: zero reservas duplicadas com até 500 usuários virtuais, com a menor latência e taxa de rejeição entre as três estratégias. | A3 (reserva concorrente), A5 (testes de carga) | Meses 3 a 7 |
+| Ana Luisa Oliveira da Silva — Colaboradora, frontend e UX (10 h/semana) | Interface mobile e painel do instrutor; condução dos testes de usabilidade. Desafio: atingir ≥ 80% de sucesso nas tarefas e SUS ≥ 70. | A4 (interface e painel), A6 (usabilidade) | Meses 3 a 9 |
+| Gabriel Marchesano — Colaborador, negócios e mercado (10 h/semana) | Validação das premissas do modelo de negócio; recrutamento de participantes. Desafio: medir a aceitação da taxa de 15% e o número de aulas por aluno. | A6 (entrevistas e recrutamento), A7 (apoio jurídico e de marca), revisão da seção 7 | Meses 6 a 9 |
+| [Nome a definir] — Consultor jurídico (40 h no total) | Adequação jurídica da operação. Desafio: definir termos de uso, política de privacidade (LGPD) e contrato com o instrutor compatíveis com a Resolução CONTRAN nº 1.020/2025 e avaliar o efeito da ADI 7978. | A7 (consultoria jurídica) | Meses 7 a 9 |
 
 | 11 \- Cronograma Físico-Financeiro |
 | :---- |
@@ -315,12 +318,12 @@ A criação da empresa se justifica pela abertura do mercado de instrução prá
 |  | Descrição da atividade |  Responsável | Item Orçamentário | Custo | Meses |  |  |  |  |  |  |  |  |  |  |  |
 |  |  | (membro da equipe) |  |  | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
 | 1 | A1. Modelo de dados e migração para PostgreSQL/PostGIS | Alexsandro | Serviço de terceiros: nuvem (meses 1–2) | R\$ 1.400 | X | X |  |  |  |  |  |  |  |  |  |  |
-| 2 | A2. Busca geoespacial: comparação de estratégias | Matheus | Serviço de terceiros: nuvem (meses 3–4) | R\$ 1.400 |  | X | X | X |  |  |  |  |  |  |  |  |
-| 3 | A3. Reserva concorrente: comparação de estratégias | Matheus | Serviço de terceiros: nuvem (mês 5) | R\$ 700 |  |  | X | X | X |  |  |  |  |  |  |  |
+| 2 | A2. Busca geoespacial: comparação de estratégias | Matheus S. P. de Lima | Serviço de terceiros: nuvem (meses 3–4) | R\$ 1.400 |  | X | X | X |  |  |  |  |  |  |  |  |
+| 3 | A3. Reserva concorrente: comparação de estratégias | Matheus M. Alfradique | Serviço de terceiros: nuvem (mês 5) | R\$ 700 |  |  | X | X | X |  |  |  |  |  |  |  |
 | 4 | A4. Interface e painel do instrutor | Ana Luisa | Material permanente: smartphones | R\$ 7.200 |  |  | X | X | X | X | X |  |  |  |  |  |
-| 5 | A5. Testes de carga em nuvem | Matheus / Alexsandro | Serviço de terceiros: nuvem (meses 6–7) e testes de carga | R\$ 3.400 |  |  |  |  |  | X | X |  |  |  |  |  |
+| 5 | A5. Testes de carga em nuvem | Matheus M. Alfradique / Alexsandro | Serviço de terceiros: nuvem (meses 6–7) e testes de carga | R\$ 3.400 |  |  |  |  |  | X | X |  |  |  |  |  |
 | 6 | A6. Usabilidade e validação de mercado | Ana Luisa / Gabriel | Serviço de terceiros: avaliação heurística e nuvem (mês 8); material de consumo: linhas de dados | R\$ 7.050 |  |  |  |  |  | X | X | X | X |  |  |  |
-| n | A7. Consolidação, aspectos jurídicos e PI | Alexsandro / Gabriel | Serviço de terceiros: consultoria jurídica e nuvem (mês 9) | R\$ 10.700 |  |  |  |  |  |  | X | X | X |  |  |  |
+| n | A7. Consolidação, aspectos jurídicos e PI | Alexsandro / Gabriel / Consultor jurídico | Serviço de terceiros: consultoria jurídica e nuvem (mês 9) | R\$ 10.700 |  |  |  |  |  |  | X | X | X |  |  |  |
 |  | Total |   |   | R\$ 31.850 |   |   |   |   |   |   |   |   |   |   |   |   |
 
 O custo mensal de nuvem (R$ 700) foi atribuído, em cada mês, à atividade que mais usa o ambiente naquele mês. A Reserva Técnica não aparece no quadro porque é calculada pela FAPESP.
