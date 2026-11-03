@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using Dirija.Core.Entities;
+using Dirija.Web.Infrastructure;
 using Dirija.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,9 +9,14 @@ namespace Dirija.Web.Controllers;
 
 public class HomeController : Controller
 {
-    /// <summary>Main screen: map search for instructors.</summary>
+    /// <summary>Main screen of students: map search. Instructors and admins go to their own start page.</summary>
     [HttpGet("")]
-    public IActionResult Index() => View();
+    public IActionResult Index()
+    {
+        var role = User.GetRole();
+        if (role is UserRole.Instructor or UserRole.Admin) return Redirect(Ui.HomeFor(role));
+        return View();
+    }
 
     [AllowAnonymous]
     [IgnoreAntiforgeryToken]

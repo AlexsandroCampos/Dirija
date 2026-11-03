@@ -1,0 +1,66 @@
+@model WeeklyAvailabilityViewModel
+@{
+    ViewData["Title"] = "Disponibilidade semanal";
+    var hours = Enumerable.Range(Model.EarliestHour, Model.LatestHour - Model.EarliestHour + 1).ToList();
+}
+<a asp-action="Agenda" class="d-inline-flex align-items-center gap-1 mb-2 text-decoration-none"><i class="bi bi-arrow-left" aria-hidden="true"></i> Voltar para a agenda</a>
+<h1 class="h4 fw-bold mb-1" style="color:var(--dj-ink)">Disponibilidade semanal</h1>
+<p class="text-muted-dj small">Marque os dias em que dá aula e até dois períodos por dia. Cada aula tem 50 minutos e começa em hora cheia. Os horários dos próximos 60 dias são criados a partir daqui; para exceções (exame médico, folga), use <a asp-action="TimeOff">Bloqueios</a>.</p>
+
+<form asp-action="Availability" method="post">
+    <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert"></div>
+    <div class="d-grid gap-2 mb-3">
+        @for (var i = 0; i < Model.Days.Count; i++)
+        {
+            var d = Model.Days[i];
+            <fieldset class="card-dj p-3 weekly-row">
+                <input type="hidden" name="Days[@i].Day" value="@((int)d.Day)" />
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input day-toggle" type="checkbox" role="switch" id="day-@i" name="Days[@i].Enabled" value="true" @(d.Enabled ? "checked" : "") />
+                    <label class="form-check-label fw-semibold" for="day-@i">@Ui.DayName(d.Day)</label>
+                </div>
+                <div class="day-ranges" @(d.Enabled ? "" : "hidden")>
+                    <div class="row g-2 align-items-center mb-2">
+                        <div class="col-auto small text-muted-dj">Período 1</div>
+                        <div class="col"><select class="form-select form-select-sm" name="Days[@i].Start1" aria-label="@Ui.DayName(d.Day), início do período 1">
+                            <option value="">--</option>
+                            @foreach (var h in hours.SkipLast(1)) { <option value="@h" selected="@(d.Start1 == h)">@Ui.Hour(h)</option> }
+                        </select></div>
+                        <div class="col-auto small">até</div>
+                        <div class="col"><select class="form-select form-select-sm" name="Days[@i].End1" aria-label="@Ui.DayName(d.Day), fim do período 1">
+                            <option value="">--</option>
+                            @foreach (var h in hours.Skip(1)) { <option value="@h" selected="@(d.End1 == h)">@Ui.Hour(h)</option> }
+                        </select></div>
+                    </div>
+                    <div class="row g-2 align-items-center">
+                        <div class="col-auto small text-muted-dj">Período 2</div>
+                        <div class="col"><select class="form-select form-select-sm" name="Days[@i].Start2" aria-label="@Ui.DayName(d.Day), início do período 2 (opcional)">
+                            <option value="">--</option>
+                            @foreach (var h in hours.SkipLast(1)) { <option value="@h" selected="@(d.Start2 == h)">@Ui.Hour(h)</option> }
+                        </select></div>
+                        <div class="col-auto small">até</div>
+                        <div class="col"><select class="form-select form-select-sm" name="Days[@i].End2" aria-label="@Ui.DayName(d.Day), fim do período 2 (opcional)">
+                            <option value="">--</option>
+                            @foreach (var h in hours.Skip(1)) { <option value="@h" selected="@(d.End2 == h)">@Ui.Hour(h)</option> }
+                        </select></div>
+                    </div>
+                </div>
+            </fieldset>
+        }
+    </div>
+    <p class="small text-muted-dj">Aulas já reservadas não mudam quando você altera a disponibilidade.</p>
+    <button type="submit" class="btn btn-accent btn-lg w-100">Salvar disponibilidade</button>
+</form>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll(".weekly-row").forEach(row => {
+            const toggle = row.querySelector(".day-toggle"), ranges = row.querySelector(".day-ranges");
+            toggle.addEventListener("change", () => {
+                ranges.hidden = !toggle.checked;
+                const first = ranges.querySelectorAll("select");
+                if (toggle.checked && first[0].value === "" && first[1].value === "") { first[0].value = "8"; first[1].value = "12"; }
+            });
+        });
+    </script>
+}

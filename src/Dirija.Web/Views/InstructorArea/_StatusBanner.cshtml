@@ -1,0 +1,19 @@
+@model Instructor
+@switch (Model.Status)
+{
+    case InstructorStatus.Pending:
+        <div class="alert alert-warning d-flex gap-2 align-items-start" role="status">
+            <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+            <div><strong>Cadastro em análise.</strong> A equipe Dirija! está conferindo seus dados. Você já pode montar a agenda; ela aparece para os alunos assim que o cadastro for aprovado.</div>
+        </div>
+        break;
+    case InstructorStatus.Rejected:
+        <div class="alert alert-danger d-flex gap-2 align-items-start" role="alert">
+            <i class="bi bi-x-octagon" aria-hidden="true"></i>
+            <div>
+                <strong>Cadastro recusado.</strong> Motivo: @Model.RejectionReason
+                <div class="mt-2"><a asp-controller="InstructorArea" asp-action="Onboarding" class="btn btn-sm btn-outline-danger">Corrigir e reenviar</a></div>
+            </div>
+        </div>
+        break;
+}

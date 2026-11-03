@@ -28,10 +28,12 @@ builder.Services
     {
         o.LoginPath = "/conta/entrar";
         o.LogoutPath = "/conta/sair";
-        o.AccessDeniedPath = "/conta/entrar";
+        o.AccessDeniedPath = "/conta/acesso-negado";
         o.Cookie.Name = "dirija.auth";
         o.Cookie.HttpOnly = true;
         o.Cookie.SameSite = SameSiteMode.Lax;
+        // HTTPS-only cookie outside local development (localhost runs on plain HTTP).
+        o.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
         o.ExpireTimeSpan = TimeSpan.FromHours(8);
         o.SlidingExpiration = true;
     });
@@ -45,15 +47,35 @@ builder.Services.AddAuthorization(o =>
 // --- Domain + persistence (EF Core / SQLite) ------------------------------------------------
 builder.Services.Configure<BookingOptions>(builder.Configuration.GetSection(BookingOptions.SectionName));
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<BookingOptions>>().Value);
+builder.Services.Configure<AgendaOptions>(builder.Configuration.GetSection(AgendaOptions.SectionName));
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<AgendaOptions>>().Value);
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddDirijaInfrastructure(SqliteConnectionString);
-builder.Services.AddScoped<InstructorSearchService>();
-builder.Services.AddScoped<BookingService>();
+builder.Services.AddDirijaServices();
 
 var app = builder.Build();
 
-// Migrations, first-run seed and agenda top-up. Database:ResetOnStartup=true recreates the database (demo reset).
-await DbInitializer.InitializeAsync(app.Services, app.Configuration.GetValue<bool>("Database:ResetOnStartup"));
+// Migrations, demo data, admin bootstrap and agenda generation.
+// Database:ResetOnStartup=true recreates the database (demo reset); Demo:Enabled=false creates no demo data or logins.
+// Admin:Email / Admin:Password come from environment variables or user-secrets, never from appsettings.json.
+var adminStatus = await DbInitializer.InitializeAsync(app.Services, new InitializerOptions
+{
+    ResetDatabase = app.Configuration.GetValue<bool>("Database:ResetOnStartup"),
+    SeedDemoData = app.Configuration.GetValue("Demo:Enabled", true),
+    AdminEmail = app.Configuration["Admin:Email"],
+    AdminPassword = app.Configuration["Admin:Password"],
+    Agenda = app.Services.GetRequiredService<AgendaOptions>()
+});
+var startupLog = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Dirija.Startup");
+switch (adminStatus)
+{
+    case AdminBootstrap.Created: startupLog.LogInformation("Conta de administrador criada a partir da configuração."); break;
+    case AdminBootstrap.EmailInUse: startupLog.LogWarning("Admin:Email já pertence a uma conta que não é de administrador; nada foi alterado."); break;
+    case AdminBootstrap.WeakPassword: startupLog.LogWarning("Admin:Password não atende à política de senha; o administrador não foi criado."); break;
+    case AdminBootstrap.InvalidEmail: startupLog.LogWarning("Admin:Email inválido; o administrador não foi criado."); break;
+}
+if (app.Configuration.GetValue("Demo:Enabled", true) && !app.Environment.IsDevelopment())
+    startupLog.LogWarning("Demo:Enabled=true fora de Development: contas de demonstração com senha conhecida estão ativas.");
 
 var ptBr = new CultureInfo("pt-BR");
 app.UseRequestLocalization(new RequestLocalizationOptions

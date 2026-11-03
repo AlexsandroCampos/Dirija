@@ -169,3 +169,21 @@ body.has-bottom-nav { padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bo
 .login-card { width: 100%; max-width: 420px; margin: 0 auto; padding: 1.5rem; }
 .login-hero { text-align: center; margin-bottom: 1.25rem; }
 .login-hero .logo-card { margin-bottom: 1rem; }
+
+/* Sign up: role choice reuses the payment option look */
+.role-choice { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.role-choice .pay-option { height: 100%; }
+
+/* Week navigation (student agenda) */
+.week-nav { display: inline-flex; align-items: center; gap: .4rem; }
+
+/* Instructor agenda */
+.agenda-list { list-style: none; margin: 0; padding: 0; }
+.agenda-item { display: flex; align-items: center; gap: .6rem; padding: .45rem 0; border-top: 1px solid #edf0f5; }
+.agenda-item:first-child { border-top: 0; }
+.agenda-item.past { opacity: .55; }
+.agenda-time { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--dj-ink); width: 3.2rem; flex-shrink: 0; }
+.agenda-state { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+
+/* Meeting point picker */
+.point-map { height: 260px; border-radius: 12px; border: 1px solid #d7deea; z-index: 0; }

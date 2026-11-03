@@ -50,7 +50,7 @@ public class InstructorSearchService(IInstructorRepository instructors)
         var dLng = radius / (KmPerDegreeLatitude * Math.Max(0.01, Math.Cos(lat * Math.PI / 180)));
         var category = query.Category is LicenseCategory.None ? null : query.Category;
 
-        var candidates = await instructors.FindVerifiedCandidatesAsync(new InstructorCandidateFilter(
+        var candidates = await instructors.FindApprovedCandidatesAsync(new InstructorCandidateFilter(
             lat - dLat, lat + dLat, lng - dLng, lng + dLng, category, query.MinRating));
 
         var items = candidates

@@ -2,12 +2,14 @@ using Dirija.Core.Entities;
 using Dirija.Core.Geo;
 using Dirija.Core.Services;
 using Dirija.Web.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Dirija.Web.Controllers;
 
 [ApiController]
 [Route("api")]
+[Authorize(Roles = Roles.Student)]
 public class SearchApiController(InstructorSearchService search) : ControllerBase
 {
     public record OriginDto(double Lat, double Lng, string Label);
@@ -64,7 +66,7 @@ public class SearchApiController(InstructorSearchService search) : ControllerBas
             Ui.ShortMoney(x.Instructor.PricePerLesson), x.Instructor.AverageRating, Ui.Rating(x.Instructor.AverageRating),
             x.Instructor.ReviewCount, x.Instructor.LessonsGiven, x.DistanceKm, Ui.Km(x.DistanceKm),
             Ui.Categories(x.Instructor.Categories), x.Instructor.Latitude, x.Instructor.Longitude,
-            x.Instructor.IsVerified, x.CoversOrigin, Url.Action("Details", "Instructors", new { id = x.Instructor.Id })!
+            x.Instructor.IsApproved, x.CoversOrigin, Url.Action("Details", "Instructors", new { id = x.Instructor.Id })!
         )).ToList();
 
         return new SearchResponse(

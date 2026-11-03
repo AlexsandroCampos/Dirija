@@ -1,0 +1,147 @@
+@model InstructorAgendaViewModel
+@{
+    ViewData["Title"] = "Agenda";
+    var firstDay = Model.Days.FirstOrDefault()?.Date ?? Model.Today;
+    var lastDay = Model.Days.LastOrDefault()?.Date ?? Model.Today;
+}
+<div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+    <h1 class="h4 fw-bold mb-0" style="color:var(--dj-ink)">Minha agenda</h1>
+    <div class="d-flex gap-2">
+        <a asp-action="Availability" class="btn btn-sm btn-outline-primary"><i class="bi bi-calendar3-week" aria-hidden="true"></i> Disponibilidade semanal</a>
+        <a asp-action="TimeOff" class="btn btn-sm btn-outline-primary"><i class="bi bi-slash-circle" aria-hidden="true"></i> Bloqueios</a>
+    </div>
+</div>
+
+<partial name="_StatusBanner" model="Model.Instructor" />
+
+@if (!Model.HasWeeklyAvailability)
+{
+    <div class="card-dj empty-state mb-3">
+        <i class="bi bi-calendar-plus" aria-hidden="true"></i>
+        <p class="fw-semibold mb-1">Você ainda não informou quando dá aulas</p>
+        <p class="small mb-2">Diga os dias e horários da semana em que atende; o sistema cria os horários dos próximos dias para os alunos reservarem.</p>
+        <a asp-action="Availability" class="btn btn-accent">Definir disponibilidade semanal</a>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    @if (Model.Week > 0)
+    {
+        <a asp-action="Agenda" asp-route-semana="@(Model.Week - 1)" class="btn btn-sm btn-outline-primary" aria-label="Semana anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+    }
+    else { <span></span> }
+    <span class="fw-semibold small">@firstDay.ToString("dd/MM") a @lastDay.ToString("dd/MM")</span>
+    @if (Model.Week < Model.MaxWeek)
+    {
+        <a asp-action="Agenda" asp-route-semana="@(Model.Week + 1)" class="btn btn-sm btn-outline-primary" aria-label="Próxima semana"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    }
+    else { <span></span> }
+</div>
+
+<div class="d-grid gap-2 mb-3">
+    @foreach (var day in Model.Days)
+    {
+        <section class="card-dj p-3" aria-labelledby="day-@day.Date.ToString("yyyyMMdd")">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 class="h6 fw-bold mb-0" id="day-@day.Date.ToString("yyyyMMdd")" style="color:var(--dj-ink)">@Ui.DayLabel(day.Date, Model.Today) <span class="text-muted-dj fw-normal">· @Ui.DayName(day.Date.DayOfWeek)</span></h2>
+                <a asp-action="TimeOff" asp-route-data="@day.Date.ToString("yyyy-MM-dd")" class="small">Bloquear período</a>
+            </div>
+            @if (day.Entries.Count == 0)
+            {
+                <p class="small text-muted-dj mb-0">Sem horários neste dia.</p>
+            }
+            else
+            {
+                <ul class="agenda-list">
+                    @foreach (var e in day.Entries)
+                    {
+                        var s = e.Slot;
+                        var past = s.Start <= Model.Now;
+                        var heldActive = s.Status == SlotStatus.Held && s.HeldUntil > Model.Now;
+                        var student = e.Booking is not null ? Model.Students.GetValueOrDefault(e.Booking.StudentId) : null;
+                        <li class="agenda-item @(past ? "past" : "")">
+                            <span class="agenda-time">@Ui.Time(s.Start)</span>
+                            <span class="agenda-state flex-grow-1 min-w-0">
+                                @if (s.Status == SlotStatus.Booked && e.Booking is { Status: BookingStatus.Confirmed or BookingStatus.Completed })
+                                {
+                                    <span class="badge text-bg-success">Reservado</span>
+                                    <span class="small text-truncate">@student?.Name</span>
+                                }
+                                else if (heldActive)
+                                {
+                                    <span class="badge text-bg-warning">Aguardando pagamento</span>
+                                }
+                                else if (s.Status == SlotStatus.Blocked)
+                                {
+                                    <span class="badge text-bg-secondary">Bloqueado</span>
+                                    @if (!string.IsNullOrEmpty(e.TimeOff?.Note)) { <span class="small text-muted-dj text-truncate">@e.TimeOff.Note</span> }
+                                }
+                                else if (s.Status == SlotStatus.Booked)
+                                {
+                                    <span class="badge text-bg-success">Reservado</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-light border">Livre</span>
+                                }
+                                @if (s.IsManual) { <span class="badge text-bg-info">Extra</span> }
+                            </span>
+                            @if (!past)
+                            {
+                                <span class="d-flex gap-1">
+                                    @if (s.Status == SlotStatus.Blocked)
+                                    {
+                                        <form asp-action="UnblockSlot" asp-route-slotId="@s.Id" asp-route-semana="@Model.Week" method="post" class="m-0">
+                                            <button class="btn btn-sm btn-outline-primary" type="submit" aria-label="Liberar horário das @Ui.Time(s.Start)">Liberar</button>
+                                        </form>
+                                    }
+                                    else if (s.IsFree(Model.Now))
+                                    {
+                                        <form asp-action="BlockSlot" asp-route-slotId="@s.Id" asp-route-semana="@Model.Week" method="post" class="m-0">
+                                            <button class="btn btn-sm btn-outline-secondary" type="submit" aria-label="Bloquear horário das @Ui.Time(s.Start)">Bloquear</button>
+                                        </form>
+                                    }
+                                    else if (e.Booking is not null)
+                                    {
+                                        <a asp-action="Lessons" class="btn btn-sm btn-outline-primary">Ver aula</a>
+                                    }
+                                    @if (s.IsManual && s.IsFree(Model.Now))
+                                    {
+                                        <form asp-action="RemoveExtraSlot" asp-route-slotId="@s.Id" asp-route-semana="@Model.Week" method="post" class="m-0">
+                                            <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="Remover horário extra das @Ui.Time(s.Start)"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                                        </form>
+                                    }
+                                </span>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+</div>
+
+<section class="card-dj p-3" aria-labelledby="extra-title">
+    <h2 id="extra-title" class="section-title">Abrir um horário extra</h2>
+    <p class="small text-muted-dj">Para um dia ou hora fora da sua disponibilidade semanal (ex.: um domingo).</p>
+    <form asp-action="AddExtraSlot" method="post" class="row g-2 align-items-end">
+        <input type="hidden" name="semana" value="@Model.Week" />
+        <div class="col-7 col-sm-5">
+            <label for="extra-date" class="form-label small mb-1">Data</label>
+            <input id="extra-date" name="data" type="date" class="form-control" required
+                   min="@Model.Today.ToString("yyyy-MM-dd")" max="@Model.Today.AddDays(Model.WindowDays - 1).ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-5 col-sm-3">
+            <label for="extra-hour" class="form-label small mb-1">Hora</label>
+            <select id="extra-hour" name="hora" class="form-select">
+                @for (var h = Model.EarliestHour; h < Model.LatestHour; h++)
+                {
+                    <option value="@h" selected="@(h == 9)">@Ui.Hour(h)</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 col-sm-4">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg" aria-hidden="true"></i> Abrir horário</button>
+        </div>
+    </form>
+</section>

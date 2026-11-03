@@ -115,8 +115,8 @@ public class SearchTests : IAsyncLifetime
     {
         var result = await _f.Search.SearchAsync(new SearchQuery { Neighborhood = "Centro", RadiusKm = 50 });
 
-        Assert.All(result.Items, i => Assert.True(i.Instructor.IsVerified));
-        Assert.True(await _f.Db.Instructors.AnyAsync(i => !i.IsVerified)); // the seed does contain one
+        Assert.All(result.Items, i => Assert.Equal(InstructorStatus.Approved, i.Instructor.Status));
+        Assert.True(await _f.Db.Instructors.AnyAsync(i => i.Status == InstructorStatus.Pending)); // the seed does contain one
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class SeedTests : IAsyncLifetime
     [Fact]
     public async Task Seed_HasAtLeastTwelveVerifiedInstructorsWithFreeSlots()
     {
-        var verified = await _f.Db.Instructors.Where(i => i.IsVerified).Select(i => i.Id).ToListAsync();
+        var verified = await _f.Db.Instructors.Where(i => i.Status == InstructorStatus.Approved).Select(i => i.Id).ToListAsync();
         Assert.True(verified.Count >= 12);
         foreach (var id in verified)
             Assert.True(await _f.Db.Slots.AnyAsync(s => s.InstructorId == id && s.Status == SlotStatus.Available));

@@ -26,6 +26,10 @@ public class InstructorDetailsViewModel
     public required IReadOnlyList<Review> Reviews { get; init; }
     public required IReadOnlyList<DaySlots> Days { get; init; }
     public DateTime Today { get; init; }
+    public int Week { get; init; }
+    public int MaxWeek { get; init; }
+    public int MinNoticeHours { get; init; }
+    public int FullRefundHours { get; init; }
 }
 
 public class CheckoutViewModel
@@ -56,7 +60,8 @@ public class PaymentFormModel
     public string? CardCvv { get; set; }
 }
 
-public record BookingListItem(Booking Booking, Instructor Instructor, Slot Slot, bool CanReview, bool HasReview);
+public record BookingListItem(Booking Booking, Instructor Instructor, Slot Slot, bool CanReview, bool HasReview,
+    Dirija.Core.Services.CancelPolicy Cancel);
 
 public class MyLessonsViewModel
 {

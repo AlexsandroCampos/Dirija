@@ -4,7 +4,13 @@
     var b = item.Booking;
     var (statusText, statusCss) = Ui.Status(b.Status);
     var holdValid = b.Status == BookingStatus.PendingPayment && item.Slot.HeldUntil > Model.Now;
-    var canCancel = b.Status is BookingStatus.Confirmed or BookingStatus.PendingPayment && item.Slot.Start > Model.Now;
+    var policy = item.Cancel;
+    var confirmText = policy.Refund switch
+    {
+        null => "Cancelar esta reserva? Nada foi cobrado.",
+        0m => $"Faltam menos de {policy.FullRefundHours} horas para a aula: se cancelar agora, NÃO haverá reembolso. Cancelar mesmo assim?",
+        _ => $"Cancelar esta aula? Você recebe reembolso integral de {Ui.Money(b.Price)} (simulado)."
+    };
 }
 <article class="card-dj lesson-item">
     <div class="d-flex justify-content-between align-items-start gap-2">
@@ -19,21 +25,31 @@
         <span class="badge @statusCss flex-shrink-0">@statusText</span>
     </div>
 
+    @if (b.Status == BookingStatus.Canceled && b.CanceledBy == CanceledBy.Instructor)
+    {
+        <div class="alert alert-warning small py-2 px-3 mt-2 mb-0" role="note">
+            <i class="bi bi-info-circle" aria-hidden="true"></i> @b.CancelReason
+        </div>
+    }
+
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
         <span class="small text-muted-dj">
             @Ui.Money(b.Price)
             @if (!string.IsNullOrEmpty(b.PaymentLabel) && b.Status != BookingStatus.PendingPayment) { <text>· @b.PaymentLabel</text> }
-            @if (b.Status == BookingStatus.Canceled && b.CancelReason is not null) { <text>· @b.CancelReason</text> }
+            @if (b.Status == BookingStatus.Canceled && b.CanceledBy != CanceledBy.Instructor && b.CancelReason is not null) { <text>· @b.CancelReason</text> }
+            @if (b.Status == BookingStatus.Canceled && b.RefundAmount is { } refund)
+            {
+                <text>· @(refund > 0 ? $"Reembolso de {Ui.Money(refund)} (simulado)" : "Sem reembolso")</text>
+            }
         </span>
         <div class="d-flex gap-2">
             @if (holdValid)
             {
                 <a asp-action="Checkout" asp-route-id="@b.Id" class="btn btn-accent btn-sm">Pagar agora</a>
             }
-            @if (canCancel)
+            @if (policy.CanCancel)
             {
-                <form asp-action="Cancel" asp-route-id="@b.Id" method="post" class="m-0"
-                      onsubmit="return confirm('Cancelar esta aula? O horário será liberado para outros alunos.');">
+                <form asp-action="Cancel" asp-route-id="@b.Id" method="post" class="m-0" data-confirm="@confirmText">
                     <button type="submit" class="btn btn-outline-danger btn-sm">Cancelar</button>
                 </form>
             }
@@ -47,4 +63,8 @@
             }
         </div>
     </div>
+    @if (policy.CanCancel && policy.Refund == 0m)
+    {
+        <p class="small text-danger mb-0 mt-2"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Menos de @policy.FullRefundHours h para a aula: cancelamento sem reembolso.</p>
+    }
 </article>

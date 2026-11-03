@@ -1,0 +1,40 @@
+@model (InstructorLessonItem Item, DateTime Now)
+@{
+    var item = Model.Item;
+    var b = item.Booking;
+    var (statusText, statusCss) = Ui.Status(b.Status);
+    var canCancel = b.Status is BookingStatus.Confirmed or BookingStatus.PendingPayment && item.Slot.Start > Model.Now;
+    var reasonId = $"motivo-{b.Id}";
+}
+<article class="card-dj lesson-item">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+        <div class="min-w-0">
+            <div class="lesson-date">@Ui.LongDate(item.Slot.Start)</div>
+            <div class="fw-semibold">@(item.Student?.Name ?? "Aluno")</div>
+            @if (item.ShowContact && item.Student is not null)
+            {
+                <div class="small"><i class="bi bi-telephone" aria-hidden="true"></i> <a href="tel:+55@(new string(item.Student.Phone.Where(char.IsAsciiDigit).ToArray()))">@item.Student.Phone</a></div>
+            }
+        </div>
+        <span class="badge @statusCss flex-shrink-0">@statusText</span>
+    </div>
+    <div class="small text-muted-dj mt-1">
+        Você recebe @Ui.Money(b.InstructorAmount) <span class="text-muted-dj">(aula de @Ui.Money(b.Price) − 15% da plataforma)</span>
+        @if (b.Status == BookingStatus.Canceled)
+        {
+            <div>@b.CancelReason @(b.RefundAmount is > 0 ? $"· aluno reembolsado em {Ui.Money(b.RefundAmount.Value)}" : "")</div>
+        }
+    </div>
+    @if (canCancel)
+    {
+        <details class="mt-2">
+            <summary class="small text-danger">Cancelar esta aula</summary>
+            <form asp-action="CancelLesson" asp-route-id="@b.Id" method="post" class="mt-2"
+                  data-confirm="Cancelar esta aula? O aluno recebe reembolso integral e o horário fica bloqueado.">
+                <label for="@reasonId" class="form-label small">Motivo (o aluno vai ver)</label>
+                <input id="@reasonId" name="motivo" class="form-control form-control-sm mb-2" maxlength="100" required minlength="3" placeholder="Ex.: carro na oficina, vamos remarcar" />
+                <button type="submit" class="btn btn-sm btn-outline-danger">Confirmar cancelamento</button>
+            </form>
+        </details>
+    }
+</article>

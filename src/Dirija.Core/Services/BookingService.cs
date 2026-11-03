@@ -9,6 +9,10 @@ public class BookingOptions
     /// <summary>Platform take rate in percent (spec does not define it; 15% for the MVP).</summary>
     public decimal PlatformFeePercent { get; set; } = 15m;
     public int HoldMinutes { get; set; } = 10;
+    /// <summary>Minimum notice before a lesson for a student to book it (the MVP sends no notifications).</summary>
+    public int MinNoticeHours { get; set; } = 6;
+    /// <summary>A student who cancels a paid lesson at least this many hours before it gets a full refund.</summary>
+    public int StudentFullRefundHours { get; set; } = 24;
 }
 
 public enum BookingError
@@ -17,13 +21,16 @@ public enum BookingError
     SlotNotFound,
     SlotUnavailable,
     SlotInPast,
+    /// <summary>The slot starts sooner than the minimum notice.</summary>
+    TooLate,
     BookingNotFound,
     NotOwner,
     HoldExpired,
     InvalidState,
     NotCompleted,
     AlreadyReviewed,
-    InvalidRating
+    InvalidRating,
+    InvalidReason
 }
 
 public record BookingResult(BookingError Error, Booking? Booking = null)
@@ -32,6 +39,9 @@ public record BookingResult(BookingError Error, Booking? Booking = null)
     public static BookingResult Ok(Booking booking) => new(BookingError.None, booking);
     public static BookingResult Fail(BookingError error, Booking? booking = null) => new(error, booking);
 }
+
+/// <summary>What happens if the student cancels now.</summary>
+public record CancelPolicy(bool CanCancel, decimal? Refund, bool FullRefund, int FullRefundHours);
 
 /// <summary>
 /// Reservation workflow. Anti-overbooking relies on optimistic concurrency: every write to a slot checks its
@@ -43,13 +53,17 @@ public class BookingService(
     IBookingRepository bookings,
     IInstructorRepository instructors,
     IReviewRepository reviews,
+    IAgendaRepository agenda,
     IUnitOfWork unitOfWork,
     IClock clock,
     BookingOptions options)
 {
     private const string ExpiredReason = "Tempo para pagamento expirou";
+    public const int MaxReasonLength = 100;
 
+    public BookingOptions Options => options;
     public TimeSpan HoldDuration => TimeSpan.FromMinutes(options.HoldMinutes);
+    public TimeSpan MinNotice => TimeSpan.FromHours(options.MinNoticeHours);
 
     public (decimal Fee, decimal InstructorAmount) CalculateSplit(decimal price)
     {
@@ -72,10 +86,14 @@ public class BookingService(
             return BookingResult.Ok(existing);
         }
 
+        if (slot.Start < now + MinNotice) return BookingResult.Fail(BookingError.TooLate);
         if (!slot.IsFree(now)) return BookingResult.Fail(BookingError.SlotUnavailable);
 
         var instructor = await instructors.GetByIdAsync(slot.InstructorId);
-        if (instructor is null) return BookingResult.Fail(BookingError.SlotNotFound);
+        if (instructor is null || !instructor.IsApproved) return BookingResult.Fail(BookingError.SlotNotFound);
+        if ((await agenda.GetOverlappingTimeOffsAsync(slot.InstructorId, slot.Start, slot.End)).Count > 0)
+            return BookingResult.Fail(BookingError.SlotUnavailable);
+
         var (fee, net) = CalculateSplit(instructor.PricePerLesson);
 
         try
@@ -120,8 +138,8 @@ public class BookingService(
         var slot = await slots.GetByIdAsync(booking.SlotId);
         if (slot is null || slot.Status != SlotStatus.Held || slot.BookingId != booking.Id || slot.HeldUntil <= now)
         {
-            CancelBooking(booking, now, ExpiredReason);
-            if (slot is not null && slot.BookingId == booking.Id) Release(slot);
+            CancelBooking(booking, now, ExpiredReason, CanceledBy.System, refund: null);
+            if (slot is not null && slot.BookingId == booking.Id) await ReleaseAsync(slot);
             await TrySaveAsync();
             return BookingResult.Fail(BookingError.HoldExpired, booking);
         }
@@ -138,6 +156,22 @@ public class BookingService(
             : BookingResult.Fail(BookingError.HoldExpired, booking);
     }
 
+    /// <summary>
+    /// Student cancellation rule: allowed until the lesson starts. A paid lesson canceled at least
+    /// <see cref="BookingOptions.StudentFullRefundHours"/> before it starts is refunded in full; later, nothing is refunded.
+    /// </summary>
+    public CancelPolicy StudentCancelPolicy(Booking booking, Slot slot)
+    {
+        var now = clock.UtcNow;
+        var hours = options.StudentFullRefundHours;
+        if (booking.Status is not (BookingStatus.PendingPayment or BookingStatus.Confirmed) || slot.Start <= now)
+            return new CancelPolicy(false, null, false, hours);
+        if (booking.Status == BookingStatus.PendingPayment) return new CancelPolicy(true, null, false, hours);
+
+        var full = slot.Start - now >= TimeSpan.FromHours(hours);
+        return new CancelPolicy(true, full ? booking.Price : 0m, full, hours);
+    }
+
     public async Task<BookingResult> CancelAsync(int bookingId, int studentId)
     {
         var now = clock.UtcNow;
@@ -146,14 +180,55 @@ public class BookingService(
         var booking = check.Booking!;
 
         var slot = await slots.GetByIdAsync(booking.SlotId);
-        if (booking.Status is not (BookingStatus.PendingPayment or BookingStatus.Confirmed) ||
-            (slot is not null && slot.Start <= now))
+        if (slot is null) return BookingResult.Fail(BookingError.InvalidState, booking);
+        var policy = StudentCancelPolicy(booking, slot);
+        if (!policy.CanCancel) return BookingResult.Fail(BookingError.InvalidState, booking);
+
+        CancelBooking(booking, now, "Cancelada pelo aluno", CanceledBy.Student, policy.Refund);
+        if (slot.BookingId == booking.Id) await ReleaseAsync(slot);
+
+        return await TrySaveAsync()
+            ? BookingResult.Ok(booking)
+            : BookingResult.Fail(BookingError.InvalidState, booking);
+    }
+
+    /// <summary>
+    /// The instructor cancels a lesson until it starts, with a reason the student will see. The student gets a full
+    /// refund and the slot stays blocked (the instructor said they cannot teach then).
+    /// </summary>
+    public async Task<BookingResult> CancelByInstructorAsync(int bookingId, int instructorId, string? reason, bool blockSlot = true)
+    {
+        var now = clock.UtcNow;
+        var booking = await bookings.GetByIdAsync(bookingId);
+        if (booking is null) return BookingResult.Fail(BookingError.BookingNotFound);
+        if (booking.InstructorId != instructorId) return BookingResult.Fail(BookingError.NotOwner);
+
+        var text = (reason ?? "").Trim();
+        if (text.Length is < 3 or > MaxReasonLength) return BookingResult.Fail(BookingError.InvalidReason, booking);
+
+        var slot = await slots.GetByIdAsync(booking.SlotId);
+        if (slot is null || slot.Start <= now ||
+            booking.Status is not (BookingStatus.PendingPayment or BookingStatus.Confirmed))
         {
             return BookingResult.Fail(BookingError.InvalidState, booking);
         }
 
-        CancelBooking(booking, now, "Cancelada pelo aluno");
-        if (slot is not null && slot.BookingId == booking.Id) Release(slot);
+        var refund = booking.Status == BookingStatus.Confirmed ? booking.Price : (decimal?)null;
+        CancelBooking(booking, now, $"Cancelada pelo instrutor: {text}", CanceledBy.Instructor, refund);
+        if (slot.BookingId == booking.Id)
+        {
+            slot.Status = SlotStatus.Blocked;
+            slot.HeldUntil = null;
+            slot.BookingId = null;
+        }
+        if (blockSlot)
+        {
+            agenda.AddTimeOff(new TimeOff
+            {
+                InstructorId = instructorId, Start = slot.Start, End = slot.End,
+                Note = "Aula cancelada por você", CreatedAt = now
+            });
+        }
 
         return await TrySaveAsync()
             ? BookingResult.Ok(booking)
@@ -171,20 +246,11 @@ public class BookingService(
         return result;
     }
 
-    public async Task<IReadOnlyList<Booking>> ListForStudentAsync(int studentId)
-    {
-        var now = clock.UtcNow;
-        var list = await bookings.GetByStudentAsync(studentId);
-        var slotMap = (await slots.GetByIdsAsync(list.Select(b => b.SlotId))).ToDictionary(s => s.Id);
+    public async Task<IReadOnlyList<Booking>> ListForStudentAsync(int studentId) =>
+        await RefreshAllAsync(await bookings.GetByStudentAsync(studentId));
 
-        var changed = false;
-        foreach (var b in list)
-        {
-            if (slotMap.TryGetValue(b.SlotId, out var slot)) changed |= await RefreshAsync(b, slot, now);
-        }
-        if (changed) await TrySaveAsync();
-        return list;
-    }
+    public async Task<IReadOnlyList<Booking>> ListForInstructorAsync(int instructorId) =>
+        await RefreshAllAsync(await bookings.GetByInstructorAsync(instructorId));
 
     public Task<bool> HasReviewAsync(int bookingId) => reviews.ExistsForBookingAsync(bookingId);
 
@@ -217,9 +283,23 @@ public class BookingService(
         return BookingResult.Ok(booking);
     }
 
-    /// <summary>Slots the student can pick right now (free and in the future, until the given UTC instant).</summary>
+    /// <summary>Slots the student can pick right now: free, respecting the minimum notice, until the given UTC instant.</summary>
     public Task<IReadOnlyList<Slot>> GetBookableSlotsAsync(int instructorId, DateTime untilUtc) =>
-        slots.GetFreeAsync(instructorId, clock.UtcNow, untilUtc);
+        slots.GetFreeAsync(instructorId, clock.UtcNow, clock.UtcNow + MinNotice, untilUtc);
+
+    private async Task<IReadOnlyList<Booking>> RefreshAllAsync(IReadOnlyList<Booking> list)
+    {
+        var now = clock.UtcNow;
+        var slotMap = (await slots.GetByIdsAsync(list.Select(b => b.SlotId))).ToDictionary(s => s.Id);
+
+        var changed = false;
+        foreach (var b in list)
+        {
+            if (slotMap.TryGetValue(b.SlotId, out var slot)) changed |= await RefreshAsync(b, slot, now);
+        }
+        if (changed) await TrySaveAsync();
+        return list;
+    }
 
     private async Task<BookingResult> GetOwnedAsync(int bookingId, int studentId)
     {
@@ -235,7 +315,7 @@ public class BookingService(
         if (slot.Status == SlotStatus.Held && slot.BookingId is { } oldId &&
             await bookings.GetByIdAsync(oldId) is { Status: BookingStatus.PendingPayment } old)
         {
-            CancelBooking(old, now, ExpiredReason);
+            CancelBooking(old, now, ExpiredReason, CanceledBy.System, refund: null);
         }
     }
 
@@ -251,24 +331,28 @@ public class BookingService(
 
         if (booking.Status == BookingStatus.PendingPayment && (slot.BookingId != booking.Id || slot.HeldUntil <= now))
         {
-            CancelBooking(booking, now, ExpiredReason);
-            if (slot.BookingId == booking.Id) Release(slot);
+            CancelBooking(booking, now, ExpiredReason, CanceledBy.System, refund: null);
+            if (slot.BookingId == booking.Id) await ReleaseAsync(slot);
             return true;
         }
 
         return false;
     }
 
-    private static void CancelBooking(Booking booking, DateTime now, string reason)
+    private static void CancelBooking(Booking booking, DateTime now, string reason, CanceledBy by, decimal? refund)
     {
         booking.Status = BookingStatus.Canceled;
         booking.CanceledAt = now;
         booking.CancelReason = reason;
+        booking.CanceledBy = by;
+        booking.RefundAmount = refund;
     }
 
-    private static void Release(Slot slot)
+    /// <summary>Frees the slot again, unless the instructor blocked that time in the meantime.</summary>
+    private async Task ReleaseAsync(Slot slot)
     {
-        slot.Status = SlotStatus.Available;
+        var blocked = (await agenda.GetOverlappingTimeOffsAsync(slot.InstructorId, slot.Start, slot.End)).Count > 0;
+        slot.Status = blocked ? SlotStatus.Blocked : SlotStatus.Available;
         slot.HeldUntil = null;
         slot.BookingId = null;
     }

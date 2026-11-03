@@ -23,9 +23,9 @@
                 <strong>@Ui.Rating(i.AverageRating)</strong>
                 <span class="text-muted-dj">(@Ui.ReviewCount(i.ReviewCount)) · @Ui.LessonCount(i.LessonsGiven)</span>
             </div>
-            @if (i.IsVerified)
+            @if (i.IsApproved)
             {
-                <div class="verified mt-1"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Credencial Detran verificada (@i.DetranCredential)</div>
+                <div class="verified mt-1"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Credencial conferida pela equipe Dirija! (nº @i.DetranCredential)</div>
             }
         </div>
     </div>
@@ -37,10 +37,10 @@
             <div class="fact"><i class="bi bi-card-checklist" aria-hidden="true"></i><div>Categoria @Ui.Categories(i.Categories)</div></div>
             <div class="fact"><i class="bi bi-car-front" aria-hidden="true"></i><div>@i.Vehicle@(i.HasDualControl && !i.Vehicle.Contains("duplo comando") ? " · com segurança extra" : "")</div></div>
             <div class="fact"><i class="bi bi-pin-map" aria-hidden="true"></i><div><strong>Ponto de encontro:</strong> @i.MeetingPoint</div></div>
-            <div class="fact"><i class="bi bi-bullseye" aria-hidden="true"></i><div>Atende em até @i.ServiceRadiusKm.ToString("0") km de @i.Neighborhood</div></div>
+            <div class="fact"><i class="bi bi-bullseye" aria-hidden="true"></i><div>Atende alunos a até @i.ServiceRadiusKm.ToString("0") km do ponto de encontro (@i.Neighborhood)</div></div>
         </div>
         <div class="col-12 col-md-6">
-            <div id="mini-map" role="img" aria-label="Mapa da área de atendimento em @i.Neighborhood, raio de @i.ServiceRadiusKm.ToString("0") quilômetros"
+            <div id="mini-map" role="img" aria-label="Mapa do ponto de encontro em @i.Neighborhood, com raio de atendimento de @i.ServiceRadiusKm.ToString("0") quilômetros"
                  data-lat="@i.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                  data-lng="@i.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                  data-radius="@((i.ServiceRadiusKm * 1000).ToString(System.Globalization.CultureInfo.InvariantCulture))"></div>
@@ -49,7 +49,20 @@
 </section>
 
 <section class="card-dj p-3 mb-3" aria-labelledby="agenda-title">
-    <h2 id="agenda-title" class="section-title">Escolha um horário</h2>
+    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+        <h2 id="agenda-title" class="section-title mb-0">Escolha um horário</h2>
+        <div class="week-nav" aria-label="Semanas">
+            @if (Model.Week > 0)
+            {
+                <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@i.Id" asp-route-semana="@(Model.Week - 1)" aria-label="Semana anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+            }
+            <span class="small fw-semibold">@(Model.Week == 0 ? "Esta semana" : $"Semana {Model.Week + 1}")</span>
+            @if (Model.Week < Model.MaxWeek)
+            {
+                <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@i.Id" asp-route-semana="@(Model.Week + 1)" aria-label="Próxima semana"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+            }
+        </div>
+    </div>
     <ul class="nav day-tabs" role="tablist">
         @for (var d = 0; d < Model.Days.Count; d++)
         {
@@ -90,9 +103,11 @@
             </div>
         }
     </div>
-    <p class="small text-muted-dj mt-3 mb-0">
-        <i class="bi bi-clock-history" aria-hidden="true"></i> Ao escolher, o horário fica reservado para você por 10 minutos enquanto finaliza o pagamento.
-    </p>
+    <ul class="small text-muted-dj mt-3 mb-0 ps-3">
+        <li>Ao escolher, o horário fica reservado para você por 10 minutos enquanto finaliza o pagamento.</li>
+        <li>Reservas com pelo menos @Model.MinNoticeHours horas de antecedência.</li>
+        <li>Cancelamento com reembolso integral até @Model.FullRefundHours horas antes da aula; depois disso, sem reembolso.</li>
+    </ul>
 </section>
 
 <section class="card-dj p-3" aria-labelledby="reviews-title">

@@ -1,0 +1,69 @@
+@model AdminDetailsViewModel
+@using System.Globalization
+@using Dirija.Core.Services
+@{
+    var i = Model.Instructor;
+    ViewData["Title"] = i.Name;
+    var (statusText, statusCss) = Ui.ApprovalStatus(i.Status);
+}
+@section Head {
+    <partial name="_LeafletHead" />
+}
+<a asp-action="Index" class="d-inline-flex align-items-center gap-1 mb-2 text-decoration-none"><i class="bi bi-arrow-left" aria-hidden="true"></i> Voltar</a>
+
+<section class="card-dj p-3 mb-3">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+        <div>
+            <h1 class="h4 fw-bold mb-1" style="color:var(--dj-ink)">@i.Name</h1>
+            <div class="small text-muted-dj">@Model.User?.Email · @Model.User?.Phone</div>
+        </div>
+        <span class="badge @statusCss">@statusText</span>
+    </div>
+    <dl class="row small mt-3 mb-0">
+        <dt class="col-5 col-sm-4">Credencial</dt><dd class="col-7 col-sm-8 fw-semibold">@i.DetranCredential</dd>
+        <dt class="col-5 col-sm-4">Categorias</dt><dd class="col-7 col-sm-8">@Ui.Categories(i.Categories)</dd>
+        <dt class="col-5 col-sm-4">Preço por aula</dt><dd class="col-7 col-sm-8">@Ui.Money(i.PricePerLesson)</dd>
+        <dt class="col-5 col-sm-4">Veículo</dt><dd class="col-7 col-sm-8">@i.Vehicle@(i.HasDualControl ? " · duplo comando" : "")</dd>
+        <dt class="col-5 col-sm-4">Ponto de encontro</dt><dd class="col-7 col-sm-8">@i.MeetingPoint (@i.Neighborhood) · raio de @i.ServiceRadiusKm.ToString("0") km</dd>
+        <dt class="col-5 col-sm-4">Descrição</dt><dd class="col-7 col-sm-8">@(string.IsNullOrWhiteSpace(i.Bio) ? "—" : i.Bio)</dd>
+        <dt class="col-5 col-sm-4">Enviado em</dt><dd class="col-7 col-sm-8">@(i.SubmittedAt is { } s ? Ui.ShortDate(s) : "—")</dd>
+        @if (i.RejectionReason is not null)
+        {
+            <dt class="col-5 col-sm-4">Motivo da recusa</dt><dd class="col-7 col-sm-8">@i.RejectionReason</dd>
+        }
+    </dl>
+    <div id="mini-map" class="mt-3" role="img" aria-label="Ponto de encontro no mapa"
+         data-lat="@i.Latitude.ToString(CultureInfo.InvariantCulture)" data-lng="@i.Longitude.ToString(CultureInfo.InvariantCulture)"></div>
+</section>
+
+@if (i.Status == InstructorStatus.Pending)
+{
+    <section class="card-dj p-3 mb-3">
+        <h2 class="section-title">Análise</h2>
+        <p class="small text-muted-dj">Antes de aprovar, confira se o número da credencial corresponde ao instrutor e se o ponto de encontro é um local público.</p>
+        <form asp-action="Approve" asp-route-id="@i.Id" method="post" class="mb-3" data-confirm="Aprovar @i.Name? Ele passa a aparecer na busca dos alunos.">
+            <button type="submit" class="btn btn-accent w-100"><i class="bi bi-check2-circle" aria-hidden="true"></i> Aprovar</button>
+        </form>
+        <form asp-action="Reject" asp-route-id="@i.Id" method="post" novalidate>
+            <label for="motivo" class="form-label">Motivo da recusa (o instrutor vai ver)</label>
+            <textarea id="motivo" name="motivo" class="form-control" rows="2" maxlength="@InstructorProfileService.MaxReasonLength"
+                      placeholder="Ex.: o número da credencial não confere. Envie o número que aparece na credencial digital.">@Model.RejectReason</textarea>
+            @Html.ValidationMessage("motivo", new { @class = "text-danger small d-block" })
+            <button type="submit" class="btn btn-outline-danger w-100 mt-2"><i class="bi bi-x-circle" aria-hidden="true"></i> Recusar</button>
+        </form>
+    </section>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            const el = document.getElementById("mini-map");
+            const ll = [parseFloat(el.dataset.lat), parseFloat(el.dataset.lng)];
+            const map = L.map(el, { scrollWheelZoom: false }).setView(ll, 15);
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+            L.marker(ll).addTo(map);
+        })();
+    </script>
+}

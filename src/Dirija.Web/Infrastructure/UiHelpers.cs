@@ -9,11 +9,54 @@ public static class ClaimsPrincipalExtensions
 {
     public static int GetUserId(this ClaimsPrincipal user) =>
         int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+
+    public static UserRole? GetRole(this ClaimsPrincipal user) =>
+        Enum.TryParse<UserRole>(user.FindFirstValue(ClaimTypes.Role), out var role) ? role : null;
 }
 
 public static class Ui
 {
     private static readonly CultureInfo PtBr = new("pt-BR");
+
+    /// <summary>Start page of each profile after login.</summary>
+    public static string HomeFor(UserRole? role) => role switch
+    {
+        UserRole.Instructor => "/instrutor",
+        UserRole.Admin => "/admin",
+        _ => "/"
+    };
+
+    public static (string Text, string Css) ApprovalStatus(InstructorStatus status) => status switch
+    {
+        InstructorStatus.Approved => ("Aprovado", "text-bg-success"),
+        InstructorStatus.Rejected => ("Recusado", "text-bg-danger"),
+        _ => ("Em análise", "text-bg-warning")
+    };
+
+    public static string Hour(int hour) => $"{hour:00}:00";
+
+    public static string DayName(DayOfWeek day)
+    {
+        var name = PtBr.DateTimeFormat.GetDayName(day);
+        return char.ToUpper(name[0]) + name[1..];
+    }
+
+    /// <summary>"sáb., 07/11 · 09:00–11:00" from UTC instants.</summary>
+    public static string Period(DateTime startUtc, DateTime endUtc)
+    {
+        var s = SaoPauloTime.ToLocal(startUtc);
+        var e = SaoPauloTime.ToLocal(endUtc);
+        if (s.TimeOfDay == TimeSpan.Zero && e.TimeOfDay == TimeSpan.Zero)
+        {
+            var lastDay = e.AddDays(-1);
+            return lastDay.Date == s.Date
+                ? $"{s.ToString("ddd, dd/MM", PtBr)} · dia inteiro"
+                : $"{s.ToString("ddd, dd/MM", PtBr)} a {lastDay.ToString("ddd, dd/MM", PtBr)} · dias inteiros";
+        }
+        return s.Date == e.Date
+            ? $"{s.ToString("ddd, dd/MM", PtBr)} · {s:HH:mm}–{e:HH:mm}"
+            : $"{s.ToString("ddd, dd/MM HH:mm", PtBr)} a {e.ToString("ddd, dd/MM HH:mm", PtBr)}";
+    }
 
     public static string Money(decimal value) => value.ToString("C", PtBr);
 

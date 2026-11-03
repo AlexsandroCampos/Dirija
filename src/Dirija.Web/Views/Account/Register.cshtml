@@ -1,0 +1,93 @@
+@model RegisterViewModel
+@using Dirija.Core.Geo
+@{
+    ViewData["Title"] = "Criar conta";
+    var isInstructor = Model.Role == Roles.Instructor;
+}
+<div class="login-wrap">
+<div class="card-dj login-card">
+    <div class="login-hero mb-3">
+        <div class="logo-card" role="img" aria-label="Dirija!">
+            <img src="~/img/semaforo.svg" class="brand-light" alt="" aria-hidden="true" />
+            <span class="wordmark" aria-hidden="true">Dirija<span class="brand-bang">!</span></span>
+        </div>
+        <h1 class="h4 fw-bold mb-0" style="color:var(--dj-ink)">Criar conta</h1>
+    </div>
+
+    <form asp-action="Register" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+        <fieldset class="mb-3">
+            <legend class="form-label fs-6">Eu sou</legend>
+            <div class="role-choice" role="radiogroup">
+                <input type="radio" class="btn-check" name="Role" id="role-student" value="@Roles.Student" @(isInstructor ? "" : "checked") />
+                <label class="pay-option" for="role-student"><i class="bi bi-mortarboard fs-4" aria-hidden="true"></i><span><strong>Aluno</strong><br /><span class="small text-muted-dj">Quero tirar a CNH</span></span></label>
+                <input type="radio" class="btn-check" name="Role" id="role-instructor" value="@Roles.Instructor" @(isInstructor ? "checked" : "") />
+                <label class="pay-option" for="role-instructor"><i class="bi bi-car-front fs-4" aria-hidden="true"></i><span><strong>Instrutor</strong><br /><span class="small text-muted-dj">Quero dar aulas</span></span></label>
+            </div>
+            <span asp-validation-for="Role" class="text-danger small"></span>
+        </fieldset>
+
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label"></label>
+            <input asp-for="Name" class="form-control" autocomplete="name" />
+            <span asp-validation-for="Name" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label"></label>
+            <input asp-for="Email" class="form-control" autocomplete="email" inputmode="email" />
+            <span asp-validation-for="Email" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Phone" class="form-label"></label>
+            <input asp-for="Phone" class="form-control" autocomplete="tel" inputmode="tel" placeholder="(11) 91234-5678" />
+            <span asp-validation-for="Phone" class="text-danger small"></span>
+        </div>
+        <div class="mb-3" id="hood-group" @(isInstructor ? "hidden" : "")>
+            <label asp-for="Neighborhood" class="form-label"></label>
+            <select asp-for="Neighborhood" class="form-select">
+                <option value="">Escolha…</option>
+                @foreach (var n in Neighborhoods.All.Select(n => n.Name).Order())
+                {
+                    <option value="@n">@n</option>
+                }
+            </select>
+            <div class="form-text">Usado como ponto de partida da busca. Você pode buscar em outro bairro a qualquer momento.</div>
+            <span asp-validation-for="Neighborhood" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Password" class="form-label"></label>
+            <input asp-for="Password" class="form-control" autocomplete="new-password" aria-describedby="pw-help" />
+            <div id="pw-help" class="form-text">Pelo menos 8 caracteres, com letras e números.</div>
+            <span asp-validation-for="Password" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="ConfirmPassword" class="form-label"></label>
+            <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" />
+            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+        </div>
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" asp-for="AcceptTerms" />
+            <label class="form-check-label small" asp-for="AcceptTerms">
+                Concordo com o uso dos meus dados (nome, e-mail, telefone e bairro) para criar a conta, fazer reservas e permitir o contato entre aluno e instrutor de uma aula confirmada.
+                <span class="text-muted-dj">Versão de demonstração; os termos de uso definitivos estão em elaboração.</span>
+            </label>
+            <span asp-validation-for="AcceptTerms" class="text-danger small d-block"></span>
+        </div>
+        <button type="submit" class="btn btn-accent btn-lg w-100">Criar conta</button>
+    </form>
+    <p class="text-center small mt-3 mb-0">Já tem conta? <a asp-action="Login" class="fw-semibold">Entrar</a></p>
+</div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const group = document.getElementById("hood-group");
+            document.querySelectorAll("input[name=Role]").forEach(r => r.addEventListener("change", () => {
+                group.hidden = document.getElementById("role-instructor").checked;
+            }));
+        })();
+    </script>
+}

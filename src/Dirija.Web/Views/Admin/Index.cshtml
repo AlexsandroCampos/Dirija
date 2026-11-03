@@ -1,0 +1,46 @@
+@model AdminListViewModel
+@{
+    ViewData["Title"] = "Instrutores";
+    (InstructorStatus Status, string Route, string Label)[] tabs =
+    [
+        (InstructorStatus.Pending, "pendentes", "Pendentes"),
+        (InstructorStatus.Approved, "aprovados", "Aprovados"),
+        (InstructorStatus.Rejected, "recusados", "Recusados")
+    ];
+}
+<h1 class="h4 fw-bold mb-3" style="color:var(--dj-ink)">Cadastros de instrutores</h1>
+
+<ul class="nav nav-pills mb-3">
+    @foreach (var t in tabs)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(Model.Status == t.Status ? "active" : "")" asp-action="Index" asp-route-status="@t.Route"
+               aria-current="@(Model.Status == t.Status ? "page" : null)">
+                @t.Label <span class="badge rounded-pill text-bg-light">@Model.Counts.GetValueOrDefault(t.Status)</span>
+            </a>
+        </li>
+    }
+</ul>
+
+@if (Model.Rows.Count == 0)
+{
+    <div class="card-dj empty-state">
+        <i class="bi bi-inbox" aria-hidden="true"></i>
+        <p class="fw-semibold mb-0">Nenhum cadastro aqui.</p>
+    </div>
+}
+<div class="d-grid gap-2">
+    @foreach (var row in Model.Rows)
+    {
+        var i = row.Instructor;
+        <a asp-action="Details" asp-route-id="@i.Id" class="card-dj p-3 text-decoration-none text-reset d-flex gap-3 align-items-center">
+            <div class="avatar" style="background:@Ui.AvatarColor(i.Id)" aria-hidden="true">@i.Initials</div>
+            <div class="min-w-0 flex-grow-1">
+                <div class="fw-semibold" style="color:var(--dj-ink)">@i.Name</div>
+                <div class="small text-muted-dj text-truncate">Credencial @i.DetranCredential · Cat. @Ui.Categories(i.Categories) · @i.Neighborhood</div>
+                @if (i.SubmittedAt is { } sent) { <div class="small text-muted-dj">Enviado em @Ui.ShortDate(sent)</div> }
+            </div>
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        </a>
+    }
+</div>

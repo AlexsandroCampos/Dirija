@@ -74,7 +74,7 @@
     if (item.verified) {
       const v = el("div", "verified");
       v.innerHTML = '<i class="bi bi-patch-check-fill" aria-hidden="true"></i> ';
-      v.append("Credencial verificada");
+      v.append("Credencial conferida");
       info.appendChild(v);
     }
     top.append(avatar, info);

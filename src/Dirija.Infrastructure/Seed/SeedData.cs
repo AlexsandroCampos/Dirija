@@ -13,16 +13,23 @@ public static class SeedData
     public const string DemoPassword = "123456";
     public const string DemoStudentEmail = "aluno@dirija.com";
     public const string SecondStudentEmail = "aluna2@dirija.com";
+    public const string DemoInstructorEmail = "instrutor@dirija.com";
+    public const string DemoPendingInstructorEmail = "pendente@dirija.com";
+    public const string DemoAdminEmail = "admin@dirija.com";
+    /// <summary>Days of fictional agenda generated for demo instructors without an account.</summary>
     public const int DaysAhead = 14;
     public const decimal SeedFeePercent = 15m;
 
+    private const string CarlosName = "Carlos Mendes";
+    private const string TiagoName = "Tiago Ramos";
+
     private record InstructorSeed(
         string Name, string Neighborhood, LicenseCategory Categories, decimal Price, double Radius,
-        double Rating, int ReviewCount, int Lessons, string Vehicle, bool Verified, string MeetingPoint, string Bio);
+        double Rating, int ReviewCount, int Lessons, string Vehicle, bool Approved, string MeetingPoint, string Bio);
 
     private static readonly InstructorSeed[] InstructorSeeds =
     {
-        new("Carlos Mendes", "Pinheiros", LicenseCategory.B, 90, 8, 4.9, 128, 640, "Hyundai HB20 2022 (duplo comando)", true,
+        new(CarlosName, "Pinheiros", LicenseCategory.B, 90, 8, 4.9, 128, 640, "Hyundai HB20 2022 (duplo comando)", true,
             "Estação Faria Lima (saída Rua dos Pinheiros)", "Instrutor há 12 anos, paciência com quem tem medo de dirigir. Foco em baliza e trânsito pesado."),
         new("Fernanda Rocha", "Moema", LicenseCategory.B, 110, 6, 4.8, 96, 410, "Chevrolet Onix 2023 (duplo comando)", true,
             "Portão 3 do Parque Ibirapuera", "Aulas tranquilas e objetivas, com simulado do percurso da prova do Detran."),
@@ -46,8 +53,8 @@ public static class SeedData
             "PUC-SP (Rua Monte Alegre)", "Instrutor recém-credenciado, participante do Programa Primeiros Instrutores."),
         new("Renata Castro", "Ipiranga", LicenseCategory.B, 82, 8, 4.6, 33, 210, "Volkswagen Gol 2021 (duplo comando)", true,
             "Museu do Ipiranga", "Aulas no Ipiranga e região, com treino em ladeiras."),
-        // Not verified yet: must never appear in search results (credential still under review).
-        new("Tiago Ramos", "Centro", LicenseCategory.B, 60, 8, 0, 0, 0, "Fiat Uno 2015", false,
+        // Pending review: must never appear in search results. Linked to the demo account pendente@dirija.com.
+        new(TiagoName, "Centro", LicenseCategory.B, 60, 8, 0, 0, 0, "Fiat Uno 2015", false,
             "Praça da Sé", "Cadastro em análise."),
     };
 
@@ -63,12 +70,23 @@ public static class SeedData
         ("Thiago F.", 5, "Recomendo demais, me senti seguro no trânsito."),
     };
 
+    /// <summary>Weekly availability of the demo instructors that have an account (Mon–Fri 08–12 and 13–18, Sat 08–12).</summary>
+    private static IEnumerable<(DayOfWeek Day, int Start, int End)> DemoWeek()
+    {
+        foreach (var day in new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday })
+        {
+            yield return (day, 8 * 60, 12 * 60);
+            yield return (day, 13 * 60, 18 * 60);
+        }
+        yield return (DayOfWeek.Saturday, 8 * 60, 12 * 60);
+    }
+
     /// <summary>Inserts the full demo dataset into an empty database.</summary>
     public static async Task SeedAsync(DirijaDbContext db, DateTime nowUtc, IPasswordHasher<User> hasher)
     {
         // Saved one by one so ids are deterministic (1, 2, ...) — tests and links rely on them.
-        var demo = await AddUserAsync(db, hasher, "Aluno Demo", DemoStudentEmail, "(11) 90000-0001", "Bela Vista");
-        await AddUserAsync(db, hasher, "Aluna Demo 2", SecondStudentEmail, "(11) 90000-0002", "Moema");
+        var demo = await AddUserAsync(db, hasher, "Aluno Demo", DemoStudentEmail, "(11) 90000-0001", "Bela Vista", UserRole.Student, nowUtc);
+        await AddUserAsync(db, hasher, "Aluna Demo 2", SecondStudentEmail, "(11) 90000-0002", "Moema", UserRole.Student, nowUtc);
 
         var instructors = new List<Instructor>();
         var n = 0;
@@ -84,8 +102,12 @@ public static class SeedData
                 PricePerLesson = s.Price, ServiceRadiusKm = s.Radius, AverageRating = s.Rating,
                 ReviewCount = s.ReviewCount, LessonsGiven = s.Lessons, Vehicle = s.Vehicle,
                 HasDualControl = s.Vehicle.Contains("duplo comando") || s.Categories.HasFlag(LicenseCategory.A),
-                IsVerified = s.Verified, MeetingPoint = s.MeetingPoint, Bio = s.Bio,
-                DetranCredential = s.Verified ? $"SP-{482000 + n * 137}" : "",
+                Status = s.Approved ? InstructorStatus.Approved : InstructorStatus.Pending,
+                SubmittedAt = nowUtc.AddDays(-30 + n), ReviewedAt = s.Approved ? nowUtc.AddDays(-28 + n) : null,
+                // Instructors that get a demo login keep a real (weekly) agenda instead of the fictional one.
+                IsDemo = s.Name is not (CarlosName or TiagoName),
+                MeetingPoint = s.MeetingPoint, Bio = s.Bio,
+                DetranCredential = $"SP-{482000 + n * 137}",
                 Latitude = hood.Location.Latitude + (rnd.NextDouble() - 0.5) * 0.008,
                 Longitude = hood.Location.Longitude + (rnd.NextDouble() - 0.5) * 0.008,
             };
@@ -96,7 +118,7 @@ public static class SeedData
 
         await TopUpSlotsAsync(db, nowUtc);
 
-        foreach (var instructor in instructors.Where(i => i.IsVerified))
+        foreach (var instructor in instructors.Where(i => i.IsApproved))
         {
             for (var k = 0; k < 3; k++)
             {
@@ -115,18 +137,57 @@ public static class SeedData
     }
 
     /// <summary>
-    /// Generates slots for the next <see cref="DaysAhead"/> local days that have none yet, so a database created
-    /// days ago still shows a full agenda. Idempotent.
+    /// Idempotent: creates the demo logins for an instructor (Carlos Mendes, approved), a pending instructor
+    /// (Tiago Ramos) and an admin, and gives both instructors a weekly availability. Also upgrades databases created
+    /// before instructor accounts existed. Slots are generated afterwards by the availability sync.
+    /// </summary>
+    public static async Task EnsureDemoAccountsAsync(DirijaDbContext db, DateTime nowUtc, IPasswordHasher<User> hasher)
+    {
+        await LinkDemoInstructorAsync(db, hasher, nowUtc, CarlosName, DemoInstructorEmail, "(11) 90000-0101");
+        await LinkDemoInstructorAsync(db, hasher, nowUtc, TiagoName, DemoPendingInstructorEmail, "(11) 90000-0102");
+
+        if (!await db.Users.AnyAsync(u => u.Email == DemoAdminEmail))
+            await AddUserAsync(db, hasher, "Admin Demo", DemoAdminEmail, "(11) 90000-0900", "", UserRole.Admin, nowUtc);
+    }
+
+    private static async Task LinkDemoInstructorAsync(DirijaDbContext db, IPasswordHasher<User> hasher, DateTime nowUtc,
+        string instructorName, string email, string phone)
+    {
+        if (await db.Users.AnyAsync(u => u.Email == email)) return;
+        var instructor = await db.Instructors.FirstOrDefaultAsync(i => i.Name == instructorName && i.UserId == null);
+        if (instructor is null) return;
+
+        var user = await AddUserAsync(db, hasher, instructorName, email, phone, "", UserRole.Instructor, nowUtc);
+        instructor.UserId = user.Id;
+        instructor.IsDemo = false;
+
+        // Fictional "booked"/"blocked" marks without a real booking make no sense in a real agenda.
+        var fake = await db.Slots.Where(s => s.InstructorId == instructor.Id && s.Start > nowUtc && s.BookingId == null &&
+                                             s.Status != SlotStatus.Available).ToListAsync();
+        foreach (var s in fake) s.Status = SlotStatus.Available;
+
+        if (!await db.WeeklyAvailability.AnyAsync(r => r.InstructorId == instructor.Id))
+        {
+            foreach (var (day, start, end) in DemoWeek())
+                db.WeeklyAvailability.Add(new WeeklyAvailability { InstructorId = instructor.Id, DayOfWeek = day, StartMinute = start, EndMinute = end });
+        }
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Generates fictional slots for the next <see cref="DaysAhead"/> local days of the demo instructors that have
+    /// no account, so a database created days ago still shows a full agenda. Idempotent.
     /// </summary>
     public static async Task<int> TopUpSlotsAsync(DirijaDbContext db, DateTime nowUtc)
     {
         var todayLocal = SaoPauloTime.Today(nowUtc);
         var fromUtc = SaoPauloTime.ToUtc(todayLocal);
 
-        var existing = await db.Slots.Where(s => s.Start >= fromUtc)
+        var instructors = await db.Instructors.Where(i => i.IsDemo).Select(i => new { i.Id, i.LessonMinutes }).ToListAsync();
+        var ids = instructors.Select(i => i.Id).ToList();
+        var existing = await db.Slots.Where(s => s.Start >= fromUtc && ids.Contains(s.InstructorId))
             .Select(s => new { s.InstructorId, s.Start }).ToListAsync();
         var covered = existing.Select(x => (x.InstructorId, SaoPauloTime.ToLocal(x.Start).Date)).ToHashSet();
-        var instructors = await db.Instructors.Select(i => new { i.Id, i.LessonMinutes }).ToListAsync();
 
         var created = 0;
         for (var d = 0; d < DaysAhead; d++)
@@ -169,9 +230,13 @@ public static class SeedData
     }
 
     private static async Task<User> AddUserAsync(DirijaDbContext db, IPasswordHasher<User> hasher,
-        string name, string email, string phone, string neighborhood)
+        string name, string email, string phone, string neighborhood, UserRole role, DateTime nowUtc)
     {
-        var user = new User { Name = name, Email = email, PasswordHash = "", Phone = phone, Neighborhood = neighborhood };
+        var user = new User
+        {
+            Name = name, Email = email, PasswordHash = "", Phone = phone, Neighborhood = neighborhood, Role = role,
+            CreatedAt = nowUtc
+        };
         user.PasswordHash = hasher.HashPassword(user, DemoPassword);
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -231,5 +296,36 @@ public static class SeedData
             .Where(s => s.InstructorId == fernanda.Id && s.Status == SlotStatus.Available && s.Start >= fromUtc)
             .OrderBy(s => s.Start).FirstOrDefaultAsync();
         if (upcoming is not null) await BookAsync(upcoming, fernanda, BookingStatus.Confirmed, nowUtc.AddDays(-1));
+    }
+
+    /// <summary>
+    /// An upcoming confirmed lesson of the second demo student with Carlos, so the demo instructor's "Aulas" screen
+    /// is not empty. Runs after the availability sync created Carlos' slots. Idempotent.
+    /// </summary>
+    public static async Task SeedInstructorDemoLessonAsync(DirijaDbContext db, DateTime nowUtc)
+    {
+        var carlos = await db.Instructors.FirstOrDefaultAsync(i => i.Name == CarlosName && i.UserId != null);
+        var student = await db.Users.FirstOrDefaultAsync(u => u.Email == SecondStudentEmail);
+        if (carlos is null || student is null) return;
+        if (await db.Bookings.AnyAsync(b => b.InstructorId == carlos.Id && b.StudentId == student.Id)) return;
+
+        var fromUtc = SaoPauloTime.ToUtc(SaoPauloTime.Today(nowUtc).AddDays(3).AddHours(10));
+        var slot = await db.Slots
+            .Where(s => s.InstructorId == carlos.Id && s.IsActive && s.Status == SlotStatus.Available && s.Start >= fromUtc)
+            .OrderBy(s => s.Start).FirstOrDefaultAsync();
+        if (slot is null) return;
+
+        var fee = Math.Round(carlos.PricePerLesson * SeedFeePercent / 100m, 2, MidpointRounding.AwayFromZero);
+        var booking = new Booking
+        {
+            StudentId = student.Id, InstructorId = carlos.Id, SlotId = slot.Id, Price = carlos.PricePerLesson,
+            PlatformFee = fee, InstructorAmount = carlos.PricePerLesson - fee, Status = BookingStatus.Confirmed,
+            PaymentMethod = PaymentMethod.Pix, PaymentLabel = "PIX", CreatedAt = nowUtc.AddHours(-2), PaidAt = nowUtc.AddHours(-2)
+        };
+        db.Bookings.Add(booking);
+        await db.SaveChangesAsync();
+        slot.Status = SlotStatus.Booked;
+        slot.BookingId = booking.Id;
+        await db.SaveChangesAsync();
     }
 }

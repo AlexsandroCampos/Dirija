@@ -3,10 +3,12 @@ using Dirija.Core.Entities;
 using Dirija.Core.Services;
 using Dirija.Web.Infrastructure;
 using Dirija.Web.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Dirija.Web.Controllers;
 
+[Authorize(Roles = Roles.Student)]
 public class BookingsController(
     BookingService bookingService,
     IInstructorRepository instructors,
@@ -31,6 +33,7 @@ public class BookingsController(
             {
                 BookingError.SlotUnavailable => "Esse horário acabou de ser reservado por outra pessoa. Escolha outro horário.",
                 BookingError.SlotInPast => "Esse horário já passou. Escolha outro horário.",
+                BookingError.TooLate => $"As aulas precisam ser reservadas com pelo menos {bookingService.Options.MinNoticeHours} horas de antecedência.",
                 _ => "Não foi possível reservar esse horário."
             };
             return RedirectToAction("Details", "Instructors", new { id = slot.InstructorId });
@@ -125,8 +128,9 @@ public class BookingsController(
             .Select(b =>
             {
                 var hasReview = reviewed.Contains(b.Id);
-                return new BookingListItem(b, instructorMap[b.InstructorId], slotMap[b.SlotId],
-                    b.Status == BookingStatus.Completed && !hasReview, hasReview);
+                var slot = slotMap[b.SlotId];
+                return new BookingListItem(b, instructorMap[b.InstructorId], slot,
+                    b.Status == BookingStatus.Completed && !hasReview, hasReview, bookingService.StudentCancelPolicy(b, slot));
             })
             .ToList();
 
@@ -150,7 +154,15 @@ public class BookingsController(
         var result = await bookingService.CancelAsync(id, User.GetUserId());
         if (result.Error is BookingError.BookingNotFound or BookingError.NotOwner) return NotFound();
 
-        if (result.Success) TempData[SuccessKey] = "Aula cancelada. O horário foi liberado para outros alunos.";
+        if (result.Success)
+        {
+            TempData[SuccessKey] = result.Booking!.RefundAmount switch
+            {
+                null => "Reserva cancelada. Nenhum valor foi cobrado.",
+                0m => "Aula cancelada. Como faltavam menos de " + bookingService.Options.StudentFullRefundHours + " horas, não há reembolso (simulado).",
+                { } v => $"Aula cancelada. Reembolso integral de {Ui.Money(v)} (simulado)."
+            };
+        }
         else TempData[ErrorKey] = "Essa aula não pode mais ser cancelada.";
         return RedirectToAction(nameof(Index));
     }

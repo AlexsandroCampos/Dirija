@@ -19,6 +19,12 @@
 
 <h2 class="section-title">Conta</h2>
 <div class="list-group mb-3">
+    <a asp-controller="Account" asp-action="EditData" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-pencil-square lead-icon" aria-hidden="true"></i> Editar meus dados</span><i class="bi bi-chevron-right" aria-hidden="true"></i>
+    </a>
+    <a asp-controller="Account" asp-action="ChangePassword" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-key lead-icon" aria-hidden="true"></i> Alterar senha</span><i class="bi bi-chevron-right" aria-hidden="true"></i>
+    </a>
     <a asp-controller="Bookings" asp-action="Index" asp-route-aba="historico" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
         <span><i class="bi bi-clock-history lead-icon" aria-hidden="true"></i> Histórico de aulas e avaliações</span><i class="bi bi-chevron-right" aria-hidden="true"></i>
     </a>
@@ -33,7 +39,7 @@
     </div>
 </div>
 
-<h2 class="section-title">Configurações</h2>
+<h2 class="section-title">Notificações <span class="badge text-bg-light fw-normal">em breve</span></h2>
 <div class="list-group mb-3">
     <div class="list-group-item d-flex justify-content-between align-items-center">
         <label class="form-check-label" for="n-reminder"><i class="bi bi-bell lead-icon" aria-hidden="true"></i> Lembrete 1h antes da aula</label>
@@ -52,7 +58,7 @@
 <h2 class="section-title">Sobre o Dirija!</h2>
 <div class="card-dj p-3 mb-3">
     <p class="mb-2">O Dirija! conecta quem está tirando a CNH (categorias A e B) a instrutores autônomos credenciados, com preço transparente por aula, busca perto de casa e agendamento sem burocracia.</p>
-    <p class="mb-0 small text-muted-dj">Todos os instrutores listados tiveram a credencial do Detran verificada.</p>
+    <p class="mb-0 small text-muted-dj">Todos os instrutores listados tiveram o cadastro e o número da credencial conferidos pela equipe Dirija!.</p>
 </div>
 
 <form asp-controller="Account" asp-action="Logout" method="post">

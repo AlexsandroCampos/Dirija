@@ -27,7 +27,12 @@ public sealed class DomainFixture : IAsyncDisposable
     public static readonly DateTime DefaultNowUtc = new(2026, 10, 26, 10, 30, 0, DateTimeKind.Utc);
 
     public static readonly IPasswordHasher<User> Hasher = new PasswordHasher<User>();
-    public static readonly BookingOptions Options = new() { PlatformFeePercent = 15, HoldMinutes = 10 };
+    public static readonly IPasswordService Passwords = new IdentityPasswordService(Hasher);
+    public static readonly BookingOptions Options = new()
+    {
+        PlatformFeePercent = 15, HoldMinutes = 10, MinNoticeHours = 6, StudentFullRefundHours = 24
+    };
+    public static readonly AgendaOptions Agenda = new() { WindowDays = 60 };
 
     private readonly SqliteConnection _connection;
     public DbContextOptions<DirijaDbContext> DbOptions { get; }
@@ -36,6 +41,9 @@ public sealed class DomainFixture : IAsyncDisposable
     public BookingService BookingService { get; }
     public InstructorSearchService Search { get; }
     public IAuthService Auth { get; }
+    public AvailabilityService Availability { get; }
+    public AccountService Accounts { get; }
+    public InstructorProfileService Profiles { get; }
 
     private DomainFixture(DateTime nowUtc)
     {
@@ -46,8 +54,15 @@ public sealed class DomainFixture : IAsyncDisposable
         Db = new DirijaDbContext(DbOptions);
         BookingService = CreateBookingService(Db, Clock);
         Search = new InstructorSearchService(new EfInstructorRepository(Db));
-        Auth = new PasswordAuthService(new EfUserRepository(Db), Hasher);
+        Auth = new PasswordAuthService(new EfUserRepository(Db), Passwords, new EfUnitOfWork(Db), Clock);
+        Availability = CreateAvailability(Db, Clock);
+        Accounts = new AccountService(new EfUserRepository(Db), new EfInstructorRepository(Db), Passwords, new EfUnitOfWork(Db), Clock);
+        Profiles = new InstructorProfileService(new EfInstructorRepository(Db), new EfUserRepository(Db), new EfUnitOfWork(Db), Clock);
     }
+
+    public static AvailabilityService CreateAvailability(DirijaDbContext db, IClock clock) => new(
+        new EfInstructorRepository(db), new EfSlotRepository(db), new EfAgendaRepository(db),
+        new EfBookingRepository(db), new EfUnitOfWork(db), clock, Agenda);
 
     public static async Task<DomainFixture> CreateAsync(DateTime? nowUtc = null)
     {
@@ -61,15 +76,32 @@ public sealed class DomainFixture : IAsyncDisposable
 
     public static BookingService CreateBookingService(DirijaDbContext db, IClock clock) => new(
         new EfSlotRepository(db), new EfBookingRepository(db), new EfInstructorRepository(db),
-        new EfReviewRepository(db), new EfUnitOfWork(db), clock, Options);
+        new EfReviewRepository(db), new EfAgendaRepository(db), new EfUnitOfWork(db), clock, Options);
 
     public Task<Slot> FirstFreeSlotAsync(int instructorId = 1) => FirstFreeSlotAsync(Db, Clock, instructorId);
 
+    /// <summary>First free slot that respects the minimum notice (i.e. a slot a student can actually book).</summary>
     public static Task<Slot> FirstFreeSlotAsync(DirijaDbContext db, IClock clock, int instructorId = 1)
     {
-        var now = clock.UtcNow;
-        return db.Slots.Where(s => s.InstructorId == instructorId && s.Status == SlotStatus.Available && s.Start > now)
+        var from = clock.UtcNow.AddHours(Options.MinNoticeHours);
+        return db.Slots.Where(s => s.InstructorId == instructorId && s.IsActive && s.Status == SlotStatus.Available && s.Start > from)
             .OrderBy(s => s.Start).FirstAsync();
+    }
+
+    /// <summary>A free bookable slot starting at least <paramref name="minHoursAhead"/> hours from now.</summary>
+    public Task<Slot> FreeSlotAtLeastAsync(double minHoursAhead, int instructorId = 1)
+    {
+        var from = Clock.UtcNow.AddHours(Math.Max(minHoursAhead, Options.MinNoticeHours));
+        return Db.Slots.Where(s => s.InstructorId == instructorId && s.IsActive && s.Status == SlotStatus.Available && s.Start > from)
+            .OrderBy(s => s.Start).FirstAsync();
+    }
+
+    /// <summary>Holds and pays a slot for the student; returns the confirmed booking.</summary>
+    public async Task<Booking> BookAsync(int studentId, Slot slot)
+    {
+        var booking = (await BookingService.HoldSlotAsync(studentId, slot.Id)).Booking!;
+        await BookingService.ConfirmPaymentAsync(booking.Id, studentId, PaymentMethod.Pix, "PIX");
+        return booking;
     }
 
     public async ValueTask DisposeAsync()
@@ -94,11 +126,15 @@ public class DirijaWebFactory : WebApplicationFactory<Program>
         _deleteOnDispose = deleteOnDispose;
     }
 
+    /// <summary>Extra configuration for a specific test (e.g. Admin:Email).</summary>
+    protected virtual IReadOnlyDictionary<string, string?> ExtraSettings => new Dictionary<string, string?>();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("ConnectionStrings:Dirija", $"Data Source={_path}");
         builder.UseSetting("Database:ResetOnStartup", "false");
+        foreach (var (key, value) in ExtraSettings) builder.UseSetting(key, value);
     }
 
     protected override void Dispose(bool disposing)

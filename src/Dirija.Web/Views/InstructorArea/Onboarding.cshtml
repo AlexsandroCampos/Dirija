@@ -1,0 +1,165 @@
+@model InstructorOnboardingViewModel
+@using System.Globalization
+@using Dirija.Core.Geo
+@using Dirija.Core.Services
+@{
+    ViewData["Title"] = Model.IsNew ? "Seus dados de instrutor" : "Dados profissionais";
+    var f = Model.Form;
+    var inv = CultureInfo.InvariantCulture;
+    var hoods = Neighborhoods.All.OrderBy(n => n.Name).ToList();
+    var hoodJson = System.Text.Json.JsonSerializer.Serialize(hoods.ToDictionary(n => n.Name, n => new[] { n.Location.Latitude, n.Location.Longitude }));
+    var hasPoint = !string.IsNullOrEmpty(f.Latitude) && !string.IsNullOrEmpty(f.Longitude);
+}
+@section Head {
+    <partial name="_LeafletHead" />
+}
+
+<h1 class="h4 fw-bold mb-1" style="color:var(--dj-ink)">@ViewData["Title"]</h1>
+@if (Model.IsNew)
+{
+    <p class="text-muted-dj">Etapa 2 de 2. Depois de enviar, a equipe Dirija! confere o número da credencial antes de mostrar você na busca.</p>
+}
+else
+{
+    <partial name="_StatusBanner" model="Model.Existing" />
+    @if (Model.Existing!.Status == InstructorStatus.Approved)
+    {
+        <p class="small text-muted-dj">Mudar o número da credencial ou as categorias envia o cadastro para uma nova análise. Preço, veículo, ponto de encontro e descrição podem ser mudados à vontade.</p>
+    }
+}
+
+<form asp-action="Onboarding" method="post" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+    <section class="card-dj p-3 mb-3">
+        <h2 class="section-title">Credencial e categorias</h2>
+        <div class="mb-3">
+            <label asp-for="Form.DetranCredential" class="form-label"></label>
+            <input asp-for="Form.DetranCredential" class="form-control" autocomplete="off" />
+            <div class="form-text">O número que aparece na sua credencial de instrutor de trânsito.</div>
+            <span asp-validation-for="Form.DetranCredential" class="text-danger small"></span>
+        </div>
+        <fieldset class="mb-1">
+            <legend class="form-label fs-6">Categorias em que dou aula</legend>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" asp-for="Form.CategoryB" />
+                <label class="form-check-label" asp-for="Form.CategoryB">B (carro)</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" asp-for="Form.CategoryA" />
+                <label class="form-check-label" asp-for="Form.CategoryA">A (moto)</label>
+            </div>
+            @Html.ValidationMessage("Form.Categories", new { @class = "text-danger small d-block" })
+        </fieldset>
+    </section>
+
+    <section class="card-dj p-3 mb-3">
+        <h2 class="section-title">Aula e veículo</h2>
+        <div class="row g-3">
+            <div class="col-12 col-sm-6">
+                <label asp-for="Form.PricePerLesson" class="form-label"></label>
+                <div class="input-group">
+                    <span class="input-group-text">R$</span>
+                    <input asp-for="Form.PricePerLesson" class="form-control" type="number" min="@InstructorProfileService.MinPrice" max="@InstructorProfileService.MaxPrice" step="1"
+                           value="@(f.PricePerLesson?.ToString("0", inv))" inputmode="numeric" />
+                </div>
+                <div class="form-text">O aluno vê esse valor. A plataforma fica com 15%.</div>
+                <span asp-validation-for="Form.PricePerLesson" class="text-danger small"></span>
+            </div>
+            <div class="col-12 col-sm-6">
+                <label asp-for="Form.Vehicle" class="form-label"></label>
+                <input asp-for="Form.Vehicle" class="form-control" placeholder="Ex.: Chevrolet Onix 2022" />
+                <span asp-validation-for="Form.Vehicle" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" asp-for="Form.HasDualControl" />
+            <label class="form-check-label" asp-for="Form.HasDualControl"></label>
+        </div>
+        <div class="mt-3">
+            <label asp-for="Form.Bio" class="form-label"></label>
+            <textarea asp-for="Form.Bio" class="form-control" rows="3" maxlength="1000" placeholder="Ex.: Instrutor há 5 anos, aulas com calma para quem tem medo de dirigir."></textarea>
+            <span asp-validation-for="Form.Bio" class="text-danger small"></span>
+        </div>
+    </section>
+
+    <section class="card-dj p-3 mb-3">
+        <h2 class="section-title">Ponto de encontro</h2>
+        <div class="alert alert-info small py-2" role="note">
+            <i class="bi bi-eye" aria-hidden="true"></i> O ponto de encontro aparece para todos os alunos. Use um <strong>local público</strong> (estação, praça, portão de parque); não informe seu endereço residencial.
+        </div>
+        <div class="row g-3">
+            <div class="col-12 col-sm-6">
+                <label asp-for="Form.Neighborhood" class="form-label"></label>
+                <select asp-for="Form.Neighborhood" class="form-select" id="hood">
+                    <option value="">Escolha…</option>
+                    @foreach (var n in hoods)
+                    {
+                        <option value="@n.Name">@n.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="Form.Neighborhood" class="text-danger small"></span>
+            </div>
+            <div class="col-12 col-sm-6">
+                <label asp-for="Form.ServiceRadiusKm" class="form-label"></label>
+                <input asp-for="Form.ServiceRadiusKm" class="form-control" type="number" min="1" max="30" step="1"
+                       value="@f.ServiceRadiusKm.ToString("0", inv)" inputmode="numeric" />
+                <span asp-validation-for="Form.ServiceRadiusKm" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="mt-3">
+            <label asp-for="Form.MeetingPoint" class="form-label"></label>
+            <input asp-for="Form.MeetingPoint" class="form-control" placeholder="Ex.: Estação Faria Lima, saída Rua dos Pinheiros" />
+            <span asp-validation-for="Form.MeetingPoint" class="text-danger small"></span>
+        </div>
+        <p class="small fw-semibold mt-3 mb-1" id="map-help">Arraste o marcador (ou toque no mapa) até o ponto de encontro.</p>
+        <div id="point-map" class="point-map" role="application" aria-describedby="map-help"></div>
+        <input type="hidden" asp-for="Form.Latitude" id="lat" />
+        <input type="hidden" asp-for="Form.Longitude" id="lng" />
+        <span asp-validation-for="Form.Latitude" class="text-danger small d-block"></span>
+        <p class="small text-muted-dj mb-0 mt-1" id="point-status" aria-live="polite"></p>
+    </section>
+
+    <button type="submit" class="btn btn-accent btn-lg w-100">@(Model.IsNew ? "Enviar para análise" : "Salvar")</button>
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            const hoods = @Html.Raw(hoodJson);
+            const bounds = { minLat: @InstructorProfileService.MinLat.ToString(inv), maxLat: @InstructorProfileService.MaxLat.ToString(inv),
+                             minLng: @InstructorProfileService.MinLng.ToString(inv), maxLng: @InstructorProfileService.MaxLng.ToString(inv) };
+            const latEl = document.getElementById("lat"), lngEl = document.getElementById("lng");
+            const hoodEl = document.getElementById("hood"), statusEl = document.getElementById("point-status");
+            let moved = latEl.value !== "";
+            const start = moved ? [parseFloat(latEl.value), parseFloat(lngEl.value)]
+                                : (hoods[hoodEl.value] || [-23.5614, -46.6559]);
+
+            const map = L.map("point-map", { scrollWheelZoom: false }).setView(start, moved ? 16 : 14);
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+            const marker = L.marker(start, { draggable: true, keyboard: true, title: "Ponto de encontro" }).addTo(map);
+
+            function inside(ll) { return ll.lat >= bounds.minLat && ll.lat <= bounds.maxLat && ll.lng >= bounds.minLng && ll.lng <= bounds.maxLng; }
+            function save(ll, byUser) {
+                latEl.value = ll.lat.toFixed(6);
+                lngEl.value = ll.lng.toFixed(6);
+                if (byUser) moved = true;
+                statusEl.textContent = inside(ll) ? (moved ? "Ponto marcado." : "Usando o centro do bairro. Arraste o marcador para o local exato.")
+                                                  : "Esse ponto fica fora do município de São Paulo.";
+                statusEl.classList.toggle("text-danger", !inside(ll));
+            }
+            marker.on("dragend", () => save(marker.getLatLng(), true));
+            map.on("click", e => { marker.setLatLng(e.latlng); save(e.latlng, true); });
+            hoodEl.addEventListener("change", () => {
+                const c = hoods[hoodEl.value];
+                if (!c || moved) return;
+                marker.setLatLng(c);
+                map.setView(c, 15);
+                save(marker.getLatLng(), false);
+            });
+            if (latEl.value !== "" || hoods[hoodEl.value]) save(marker.getLatLng(), false);
+        })();
+    </script>
+}

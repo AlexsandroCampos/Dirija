@@ -3,11 +3,13 @@ using Dirija.Core.Entities;
 using Dirija.Core.Services;
 using Dirija.Web.Infrastructure;
 using Dirija.Web.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Dirija.Web.Controllers;
 
 [Route("perfil")]
+[Authorize(Roles = Roles.Student)]
 public class ProfileController(IUserRepository users, BookingService bookingService) : Controller
 {
     [HttpGet("")]

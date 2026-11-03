@@ -15,6 +15,8 @@ public class DirijaDbContext(DbContextOptions<DirijaDbContext> options) : DbCont
     public DbSet<Slot> Slots => Set<Slot>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<WeeklyAvailability> WeeklyAvailability => Set<WeeklyAvailability>();
+    public DbSet<TimeOff> TimeOffs => Set<TimeOff>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -34,6 +36,7 @@ public class DirijaDbContext(DbContextOptions<DirijaDbContext> options) : DbCont
         {
             e.ToTable("instructors");
             e.Ignore(x => x.Initials);
+            e.Ignore(x => x.IsApproved);
             e.Property(x => x.Name).HasMaxLength(120).IsRequired();
             e.Property(x => x.Neighborhood).HasMaxLength(80).IsRequired();
             e.Property(x => x.PricePerLesson).HasPrecision(10, 2);
@@ -42,7 +45,28 @@ public class DirijaDbContext(DbContextOptions<DirijaDbContext> options) : DbCont
             e.Property(x => x.MeetingPoint).HasMaxLength(200);
             e.Property(x => x.DetranCredential).HasMaxLength(40);
             e.Property(x => x.PhotoUrl).HasMaxLength(500);
-            e.HasIndex(x => new { x.IsVerified, x.Latitude, x.Longitude });
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.RejectionReason).HasMaxLength(300);
+            // One instructor profile per login account (demo instructors have none).
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => x.UserId).IsUnique();
+            e.HasIndex(x => new { x.Status, x.Latitude, x.Longitude });
+        });
+
+        b.Entity<WeeklyAvailability>(e =>
+        {
+            e.ToTable("weekly_availability");
+            e.Property(x => x.DayOfWeek).HasConversion<string>().HasMaxLength(10);
+            e.HasOne<Instructor>().WithMany().HasForeignKey(x => x.InstructorId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.InstructorId);
+        });
+
+        b.Entity<TimeOff>(e =>
+        {
+            e.ToTable("time_offs");
+            e.Property(x => x.Note).HasMaxLength(100);
+            e.HasOne<Instructor>().WithMany().HasForeignKey(x => x.InstructorId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.InstructorId, x.Start, x.End });
         });
 
         b.Entity<Slot>(e =>
@@ -51,7 +75,8 @@ public class DirijaDbContext(DbContextOptions<DirijaDbContext> options) : DbCont
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasOne<Instructor>().WithMany().HasForeignKey(x => x.InstructorId).OnDelete(DeleteBehavior.Cascade);
-            e.HasIndex(x => new { x.InstructorId, x.Start });
+            // Unique: two requests can never create the same slot twice (e.g. a double click on "save").
+            e.HasIndex(x => new { x.InstructorId, x.Start }).IsUnique();
             // Slot.BookingId is a plain column (no FK) to avoid a Slot <-> Booking foreign key cycle.
         });
 
@@ -61,7 +86,10 @@ public class DirijaDbContext(DbContextOptions<DirijaDbContext> options) : DbCont
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.PaymentMethod).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.PaymentLabel).HasMaxLength(60);
-            e.Property(x => x.CancelReason).HasMaxLength(120);
+            e.Property(x => x.CancelReason).HasMaxLength(200);
+            e.Property(x => x.CanceledBy).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.RefundAmount).HasPrecision(10, 2);
+            e.HasIndex(x => x.InstructorId);
             e.Property(x => x.Price).HasPrecision(10, 2);
             e.Property(x => x.PlatformFee).HasPrecision(10, 2);
             e.Property(x => x.InstructorAmount).HasPrecision(10, 2);

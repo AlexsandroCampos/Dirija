@@ -1,0 +1,46 @@
+@model AccountDataViewModel
+@using Dirija.Core.Geo
+@{
+    ViewData["Title"] = "Meus dados";
+}
+<h1 class="h4 fw-bold mb-3" style="color:var(--dj-ink)">Meus dados</h1>
+
+<form asp-action="EditData" method="post" class="card-dj p-3" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+    <div class="mb-3">
+        <label class="form-label" for="email-ro">E-mail</label>
+        <input id="email-ro" class="form-control" value="@Model.Email" readonly aria-describedby="email-help" />
+        <div id="email-help" class="form-text">O e-mail é usado para entrar e não pode ser alterado.</div>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" autocomplete="name" />
+        <span asp-validation-for="Name" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Phone" class="form-label"></label>
+        <input asp-for="Phone" class="form-control" autocomplete="tel" inputmode="tel" />
+        <span asp-validation-for="Phone" class="text-danger small"></span>
+    </div>
+    @if (Model.IsStudent)
+    {
+        <div class="mb-3">
+            <label asp-for="Neighborhood" class="form-label"></label>
+            <select asp-for="Neighborhood" class="form-select">
+                @foreach (var n in Neighborhoods.All.Select(n => n.Name).Order())
+                {
+                    <option value="@n">@n</option>
+                }
+            </select>
+            <span asp-validation-for="Neighborhood" class="text-danger small"></span>
+        </div>
+    }
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-accent">Salvar</button>
+        <a href="@Ui.HomeFor(User.GetRole())" class="btn btn-outline-primary">Voltar</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

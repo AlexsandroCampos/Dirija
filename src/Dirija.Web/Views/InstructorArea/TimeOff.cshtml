@@ -1,0 +1,126 @@
+@model TimeOffViewModel
+@{
+    ViewData["Title"] = "Bloqueios";
+    var f = Model.Form;
+    var hours = Enumerable.Range(0, 24).ToList();
+}
+<a asp-action="Agenda" class="d-inline-flex align-items-center gap-1 mb-2 text-decoration-none"><i class="bi bi-arrow-left" aria-hidden="true"></i> Voltar para a agenda</a>
+<h1 class="h4 fw-bold mb-1" style="color:var(--dj-ink)">Bloqueios</h1>
+<p class="text-muted-dj small">Para quando você não pode dar aula fora do normal: exame médico, folga, viagem. O período fica indisponível para os alunos e continua valendo mesmo se você mudar a disponibilidade semanal.</p>
+
+<form asp-action="TimeOff" method="post" class="card-dj p-3 mb-3" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+    @if (Model.NeedsDecision)
+    {
+        @* Second step: the period hits lessons that are already booked. Keep the same period in hidden fields. *@
+        <input type="hidden" name="StartDate" value="@f.StartDate?.ToString("yyyy-MM-dd")" />
+        <input type="hidden" name="EndDate" value="@f.EndDate?.ToString("yyyy-MM-dd")" />
+        <input type="hidden" name="AllDay" value="@(f.AllDay ? "true" : "false")" />
+        <input type="hidden" name="StartHour" value="@f.StartHour" />
+        <input type="hidden" name="EndHour" value="@f.EndHour" />
+        <input type="hidden" name="Note" value="@f.Note" />
+
+        <div class="alert alert-warning" role="alert">
+            <p class="fw-semibold mb-2"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Este período tem @Model.Affected.Count aula(s) já reservada(s):</p>
+            <ul class="mb-0">
+                @foreach (var a in Model.Affected)
+                {
+                    <li>@Ui.LongDate(a.Slot.Start) · @(a.Student?.Name ?? "Aluno") @(a.Booking.Status == BookingStatus.PendingPayment ? "(aguardando pagamento)" : "")</li>
+                }
+            </ul>
+        </div>
+        <fieldset class="mb-3">
+            <legend class="form-label fs-6">O que fazer com essas aulas?</legend>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="Decision" id="dec-keep" value="keep" checked="@(f.Decision != "cancel")" />
+                <label class="form-check-label" for="dec-keep">Manter as aulas e bloquear só os horários livres</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="Decision" id="dec-cancel" value="cancel" checked="@(f.Decision == "cancel")" />
+                <label class="form-check-label" for="dec-cancel">Cancelar as aulas (o aluno recebe reembolso integral e vê o motivo)</label>
+            </div>
+        </fieldset>
+        <div class="mb-3">
+            <label for="CancelReason" class="form-label">Motivo que o aluno vai ver (se cancelar)</label>
+            <input id="CancelReason" name="CancelReason" class="form-control" maxlength="100" value="@f.CancelReason" placeholder="Ex.: imprevisto de saúde, vamos remarcar" />
+            @Html.ValidationMessage("CancelReason", new { @class = "text-danger small" })
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-accent">Confirmar bloqueio</button>
+            <a asp-action="TimeOff" class="btn btn-outline-primary">Voltar</a>
+        </div>
+    }
+    else
+    {
+        <h2 class="section-title">Novo bloqueio</h2>
+        <div class="row g-3">
+            <div class="col-6">
+                <label for="StartDate" class="form-label">Data</label>
+                <input id="StartDate" name="StartDate" type="date" class="form-control" value="@f.StartDate?.ToString("yyyy-MM-dd")" required />
+                @Html.ValidationMessage("StartDate", new { @class = "text-danger small" })
+            </div>
+            <div class="col-6">
+                <label for="EndDate" class="form-label">Até (opcional)</label>
+                <input id="EndDate" name="EndDate" type="date" class="form-control" value="@f.EndDate?.ToString("yyyy-MM-dd")" aria-describedby="end-help" />
+                <div id="end-help" class="form-text">Para vários dias seguidos.</div>
+                @Html.ValidationMessage("EndDate", new { @class = "text-danger small" })
+            </div>
+        </div>
+        <div class="form-check form-switch my-3">
+            <input class="form-check-input" type="checkbox" role="switch" id="AllDay" name="AllDay" value="true" @(f.AllDay ? "checked" : "") />
+            <label class="form-check-label" for="AllDay">Dia inteiro</label>
+        </div>
+        <div class="row g-3" id="hour-range" @(f.AllDay ? "hidden" : "")>
+            <div class="col-6">
+                <label for="StartHour" class="form-label">Das</label>
+                <select id="StartHour" name="StartHour" class="form-select">
+                    @foreach (var h in hours) { <option value="@h" selected="@(f.StartHour == h)">@Ui.Hour(h)</option> }
+                </select>
+            </div>
+            <div class="col-6">
+                <label for="EndHour" class="form-label">Até</label>
+                <select id="EndHour" name="EndHour" class="form-select">
+                    @foreach (var h in hours.Skip(1)) { <option value="@h" selected="@(f.EndHour == h)">@Ui.Hour(h)</option> }
+                </select>
+                @Html.ValidationMessage("EndHour", new { @class = "text-danger small" })
+            </div>
+        </div>
+        <div class="mt-3">
+            <label for="Note" class="form-label">Anotação (só você vê)</label>
+            <input id="Note" name="Note" class="form-control" maxlength="100" value="@f.Note" placeholder="Ex.: exame médico" />
+        </div>
+        <button type="submit" class="btn btn-accent mt-3 w-100">Bloquear período</button>
+    }
+</form>
+
+<section class="card-dj p-3" aria-labelledby="list-title">
+    <h2 id="list-title" class="section-title">Próximos bloqueios</h2>
+    @if (Model.Upcoming.Count == 0)
+    {
+        <p class="small text-muted-dj mb-0">Nenhum bloqueio programado.</p>
+    }
+    <ul class="list-unstyled mb-0">
+        @foreach (var t in Model.Upcoming)
+        {
+            <li class="d-flex justify-content-between align-items-center gap-2 py-2 border-top">
+                <div class="min-w-0">
+                    <div class="fw-semibold">@Ui.Period(t.Start, t.End)</div>
+                    @if (!string.IsNullOrEmpty(t.Note)) { <div class="small text-muted-dj text-truncate">@t.Note</div> }
+                </div>
+                <form asp-action="RemoveTimeOff" asp-route-id="@t.Id" method="post" class="m-0" data-confirm="Remover este bloqueio? Os horários do período voltam a ficar livres.">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                </form>
+            </li>
+        }
+    </ul>
+</section>
+
+@section Scripts {
+    <script>
+        (function () {
+            const allDay = document.getElementById("AllDay"), range = document.getElementById("hour-range");
+            if (allDay) allDay.addEventListener("change", () => { range.hidden = allDay.checked; });
+        })();
+    </script>
+}

@@ -1,5 +1,6 @@
 using Dirija.Core.Abstractions;
 using Dirija.Core.Entities;
+using Dirija.Core.Services;
 using Dirija.Infrastructure.Identity;
 using Dirija.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -22,10 +23,23 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, EfUserRepository>();
         services.AddScoped<IInstructorRepository, EfInstructorRepository>();
         services.AddScoped<ISlotRepository, EfSlotRepository>();
+        services.AddScoped<IAgendaRepository, EfAgendaRepository>();
         services.AddScoped<IBookingRepository, EfBookingRepository>();
         services.AddScoped<IReviewRepository, EfReviewRepository>();
         services.AddScoped<IAuthService, PasswordAuthService>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+        services.AddSingleton<IPasswordService, IdentityPasswordService>();
+        return services;
+    }
+
+    /// <summary>Domain services built over the repositories above.</summary>
+    public static IServiceCollection AddDirijaServices(this IServiceCollection services)
+    {
+        services.AddScoped<InstructorSearchService>();
+        services.AddScoped<BookingService>();
+        services.AddScoped<AvailabilityService>();
+        services.AddScoped<AccountService>();
+        services.AddScoped<InstructorProfileService>();
         return services;
     }
 }

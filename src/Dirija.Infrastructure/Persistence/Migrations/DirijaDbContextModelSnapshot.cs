@@ -24,10 +24,15 @@ namespace Dirija.Infrastructure.Persistence.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("CancelReason")
-                        .HasMaxLength(120)
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("CanceledAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CanceledBy")
+                        .IsRequired()
+                        .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -57,6 +62,10 @@ namespace Dirija.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("RefundAmount")
                         .HasPrecision(10, 2)
                         .HasColumnType("TEXT");
 
@@ -111,7 +120,7 @@ namespace Dirija.Infrastructure.Persistence.Migrations
                     b.Property<bool>("HasDualControl")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("IsVerified")
+                    b.Property<bool>("IsDemo")
                         .HasColumnType("INTEGER");
 
                     b.Property<double>("Latitude")
@@ -149,11 +158,32 @@ namespace Dirija.Infrastructure.Persistence.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("ReviewCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ReviewedByUserId")
                         .HasColumnType("INTEGER");
 
                     b.Property<double>("ServiceRadiusKm")
                         .HasColumnType("REAL");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Vehicle")
                         .IsRequired()
@@ -162,7 +192,10 @@ namespace Dirija.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("IsVerified", "Latitude", "Longitude");
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "Latitude", "Longitude");
 
                     b.ToTable("instructors", (string)null);
                 });
@@ -225,6 +258,12 @@ namespace Dirija.Infrastructure.Persistence.Migrations
                     b.Property<int>("InstructorId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsManual")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("Start")
                         .HasColumnType("TEXT");
 
@@ -239,9 +278,39 @@ namespace Dirija.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("InstructorId", "Start");
+                    b.HasIndex("InstructorId", "Start")
+                        .IsUnique();
 
                     b.ToTable("slots", (string)null);
+                });
+
+            modelBuilder.Entity("Dirija.Core.Entities.TimeOff", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("End")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("InstructorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstructorId", "Start", "End");
+
+                    b.ToTable("time_offs", (string)null);
                 });
 
             modelBuilder.Entity("Dirija.Core.Entities.User", b =>
@@ -250,9 +319,18 @@ namespace Dirija.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FailedLoginCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LockoutEndUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -288,6 +366,33 @@ namespace Dirija.Infrastructure.Persistence.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("Dirija.Core.Entities.WeeklyAvailability", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DayOfWeek")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EndMinute")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("InstructorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StartMinute")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstructorId");
+
+                    b.ToTable("weekly_availability", (string)null);
+                });
+
             modelBuilder.Entity("Dirija.Core.Entities.Booking", b =>
                 {
                     b.HasOne("Dirija.Core.Entities.Instructor", null)
@@ -309,6 +414,14 @@ namespace Dirija.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Dirija.Core.Entities.Instructor", b =>
+                {
+                    b.HasOne("Dirija.Core.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("Dirija.Core.Entities.Review", b =>
                 {
                     b.HasOne("Dirija.Core.Entities.Instructor", null)
@@ -319,6 +432,24 @@ namespace Dirija.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Dirija.Core.Entities.Slot", b =>
+                {
+                    b.HasOne("Dirija.Core.Entities.Instructor", null)
+                        .WithMany()
+                        .HasForeignKey("InstructorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dirija.Core.Entities.TimeOff", b =>
+                {
+                    b.HasOne("Dirija.Core.Entities.Instructor", null)
+                        .WithMany()
+                        .HasForeignKey("InstructorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dirija.Core.Entities.WeeklyAvailability", b =>
                 {
                     b.HasOne("Dirija.Core.Entities.Instructor", null)
                         .WithMany()

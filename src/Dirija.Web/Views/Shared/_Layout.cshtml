@@ -2,11 +2,23 @@
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
     var action = ViewContext.RouteData.Values["action"]?.ToString();
     var isAuth = User.Identity?.IsAuthenticated == true;
+    var role = User.GetRole();
     var firstName = User.Identity?.Name?.Split(' ').FirstOrDefault();
     string Active(bool on) => on ? "active" : "";
+    string? Current(bool on) => on ? "page" : null;
+    var accountPage = controller == "Account" && action is "EditData" or "ChangePassword";
+
+    // Student
     var navSearch = controller is "Home" or "Instructors" || (controller == "Bookings" && action is "Checkout" or "Pay" or "Confirmed");
     var navLessons = controller == "Bookings" && !navSearch;
-    var navProfile = controller == "Profile";
+    var navProfile = controller == "Profile" || (role == UserRole.Student && accountPage);
+    // Instructor
+    var navAgenda = controller == "InstructorArea" && action is "Agenda" or "Availability" or "TimeOff";
+    var navInstructorLessons = controller == "InstructorArea" && action == "Lessons";
+    var navInstructorProfile = (controller == "InstructorArea" && action is "Profile" or "Onboarding") || (role == UserRole.Instructor && accountPage);
+    // Admin
+    var navAdmin = controller == "Admin" && action is "Index" or "Details" or "Reject";
+    var navAdminAccount = (controller == "Admin" && action == "Account") || (role == UserRole.Admin && accountPage);
 }
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -31,7 +43,7 @@
     {
         <header class="app-header">
             <div class="app-shell d-flex align-items-center justify-content-between">
-                <a class="brand" asp-controller="Home" asp-action="Index" aria-label="Dirija! página inicial">
+                <a class="brand" href="@Ui.HomeFor(role)" aria-label="Dirija! página inicial">
                     <img src="~/img/semaforo.svg" class="brand-light" alt="" aria-hidden="true" /><span class="wordmark">Dirija<span class="brand-bang">!</span></span>
                 </a>
                 <span class="header-user"><i class="bi bi-person-circle" aria-hidden="true"></i> Olá, @firstName</span>
@@ -58,20 +70,51 @@
     @if (isAuth)
     {
         <nav class="bottom-nav" aria-label="Navegação principal">
-            <a class="@Active(navSearch)" asp-controller="Home" asp-action="Index" aria-current="@(navSearch ? "page" : null)">
-                <i class="bi bi-search" aria-hidden="true"></i><span>Buscar</span>
-            </a>
-            <a class="@Active(navLessons)" asp-controller="Bookings" asp-action="Index" aria-current="@(navLessons ? "page" : null)">
-                <i class="bi bi-calendar-check" aria-hidden="true"></i><span>Minhas aulas</span>
-            </a>
-            <a class="@Active(navProfile)" asp-controller="Profile" asp-action="Index" aria-current="@(navProfile ? "page" : null)">
-                <i class="bi bi-person" aria-hidden="true"></i><span>Perfil</span>
-            </a>
+            @if (role == UserRole.Instructor)
+            {
+                <a class="@Active(navAgenda)" asp-controller="InstructorArea" asp-action="Agenda" aria-current="@Current(navAgenda)">
+                    <i class="bi bi-calendar-week" aria-hidden="true"></i><span>Agenda</span>
+                </a>
+                <a class="@Active(navInstructorLessons)" asp-controller="InstructorArea" asp-action="Lessons" aria-current="@Current(navInstructorLessons)">
+                    <i class="bi bi-calendar-check" aria-hidden="true"></i><span>Aulas</span>
+                </a>
+                <a class="@Active(navInstructorProfile)" asp-controller="InstructorArea" asp-action="Profile" aria-current="@Current(navInstructorProfile)">
+                    <i class="bi bi-person" aria-hidden="true"></i><span>Perfil</span>
+                </a>
+            }
+            else if (role == UserRole.Admin)
+            {
+                <a class="@Active(navAdmin)" asp-controller="Admin" asp-action="Index" aria-current="@Current(navAdmin)">
+                    <i class="bi bi-person-check" aria-hidden="true"></i><span>Instrutores</span>
+                </a>
+                <a class="@Active(navAdminAccount)" asp-controller="Admin" asp-action="Account" aria-current="@Current(navAdminAccount)">
+                    <i class="bi bi-person" aria-hidden="true"></i><span>Conta</span>
+                </a>
+            }
+            else
+            {
+                <a class="@Active(navSearch)" asp-controller="Home" asp-action="Index" aria-current="@Current(navSearch)">
+                    <i class="bi bi-search" aria-hidden="true"></i><span>Buscar</span>
+                </a>
+                <a class="@Active(navLessons)" asp-controller="Bookings" asp-action="Index" aria-current="@Current(navLessons)">
+                    <i class="bi bi-calendar-check" aria-hidden="true"></i><span>Minhas aulas</span>
+                </a>
+                <a class="@Active(navProfile)" asp-controller="Profile" asp-action="Index" aria-current="@Current(navProfile)">
+                    <i class="bi bi-person" aria-hidden="true"></i><span>Perfil</span>
+                </a>
+            }
         </nav>
     }
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+        // Forms with data-confirm ask before submitting (cancel lesson, remove time off...).
+        document.addEventListener("submit", function (e) {
+            const msg = e.target.getAttribute && e.target.getAttribute("data-confirm");
+            if (msg && !window.confirm(msg)) e.preventDefault();
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

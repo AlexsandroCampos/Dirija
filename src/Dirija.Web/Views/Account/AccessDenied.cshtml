@@ -1,0 +1,16 @@
+@{
+    ViewData["Title"] = "Acesso negado";
+}
+<div class="card-dj empty-state mt-3">
+    <i class="bi bi-shield-lock" aria-hidden="true"></i>
+    <h1 class="h5 fw-bold" style="color:var(--dj-ink)">Esta página não está disponível para o seu perfil</h1>
+    <p class="mb-3">Cada perfil (aluno, instrutor ou administração) tem as próprias telas.</p>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <a href="@Ui.HomeFor(User.GetRole())" class="btn btn-accent">Ir para a minha página inicial</a>
+    }
+    else
+    {
+        <a asp-controller="Account" asp-action="Login" class="btn btn-accent">Entrar</a>
+    }
+</div>

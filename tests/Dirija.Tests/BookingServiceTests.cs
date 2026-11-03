@@ -129,8 +129,9 @@ public class BookingServiceTests : IAsyncLifetime
     public async Task HoldSlot_BookedOrBlockedOrPastSlot_Fails()
     {
         var now = _f.Clock.UtcNow;
-        var booked = await _f.Db.Slots.FirstAsync(s => s.Status == SlotStatus.Booked && s.Start > now);
-        var blocked = await _f.Db.Slots.FirstAsync(s => s.Status == SlotStatus.Blocked);
+        var bookable = now.AddHours(DomainFixture.Options.MinNoticeHours); // beyond the minimum notice
+        var booked = await _f.Db.Slots.FirstAsync(s => s.Status == SlotStatus.Booked && s.Start > bookable);
+        var blocked = await _f.Db.Slots.FirstAsync(s => s.Status == SlotStatus.Blocked && s.Start > bookable);
         var past = await _f.Db.Slots.FirstAsync(s => s.Start < now);
 
         Assert.Equal(BookingError.SlotUnavailable, (await _f.BookingService.HoldSlotAsync(Student, booked.Id)).Error);
